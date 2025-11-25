@@ -1,25 +1,7 @@
-<?php
-    require ('config/db.php');
-    session_start();
-    require('config/session_disallow_courier.php');
-
-    // Mark notification as read if coming from notification
-    $highlight_order_id = $_GET['highlight'] ?? null;
-    $notif_id = $_GET['notif_id'] ?? null;
-
-    if ($notif_id && isset($_SESSION['user_id'])) {
-        $mark_read_stmt = $pdo->prepare("
-            UPDATE notifications 
-            SET is_read = 1 
-            WHERE notification_id = :notif_id AND user_id = :user_id
-        ");
-        $mark_read_stmt->execute([
-            ':notif_id' => $notif_id,
-            ':user_id' => $_SESSION['user_id']
-        ]);
-    }
-
-    if(isset($_SESSION['success_message'])){
+<?php 
+    require ('../config/session_admin.php');
+    require ('../config/db.php');
+	if(isset($_SESSION['success_message'])){
         $success_message = $_SESSION['success_message'];
         unset($_SESSION['success_message']);
     }
@@ -27,691 +9,471 @@
         $error_message = $_SESSION['error_message'];
         unset($_SESSION['error_message']);
     }
+	$stmt = $pdo->prepare("UPDATE orders SET seen = 1 WHERE seen = 0");
+    $stmt->execute();
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Orders</title>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="description" content="Responsive Admin &amp; Dashboard Template based on Bootstrap 5">
+	<meta name="author" content="AdminKit">
+	<meta name="keywords" content="adminkit, bootstrap, bootstrap 5, admin, dashboard, template, responsive, css, sass, html, theme, front-end, ui kit, web">
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Google Fonts: Poppins -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
-    <!-- Custom CSS -->
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --secondary-color: #f59e0b;
-        }
-        
-        body {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            font-family: 'Poppins', sans-serif;
-            font-size: 14px;
-            min-height: 100vh;
-        }
-        
-        /* Animated Header */
-        .orders-header {
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #60a5fa 100%);
-            background-size: 400% 400%;
-            animation: gradientShift 15s ease infinite;
-            color: white;
-            text-align: center;
-            padding: 4rem 0;
-            position: relative;
-            overflow: hidden;
-            margin-bottom: 2rem;
-        }
-        
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-30px); }
-        }
-        
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+	<link rel="preconnect" href="https://fonts.gstatic.com">
+	<link rel="shortcut icon" href="img/icons/icon-48x48.png" />
 
-        .order-card {
-            background: white;
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            margin-bottom: 20px;
-            padding: 2rem;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            display: flex;
-            align-items: flex-start;
-            gap: 20px;
-            animation: fadeIn 0.5s ease-in-out;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .order-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 5px;
-            height: 100%;
-            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-            transform: scaleY(0);
-            transition: transform 0.3s ease;
-        }
-        
-        .order-card:hover::before {
-            transform: scaleY(1);
-        }
+	<link rel="canonical" href="https://demo-basic.adminkit.io/pages-blank.html" />
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+	<title>Orders</title>
 
-        .order-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 16px 48px rgba(37, 99, 235, 0.2);
-        }
-        
-        /* Order Card Image */
-        .order-card img {
-            border-radius: 12px;
-            transition: transform 0.3s ease;
-        }
-        
-        .order-card:hover img {
-            transform: scale(1.05);
-        }
-        
-        /* Status Badge Enhancement - Only for order status badges */
-        .order-card .badge,
-        .badge-delivered,
-        .badge-processing,
-        .badge-pending,
-        .badge-received,
-        .badge-cancelled {
-            padding: 0.5rem 1rem !important;
-            border-radius: 50px !important;
-            font-weight: 600 !important;
-            font-size: 0.875rem !important;
-        }
-        
-        /* Keep navbar badges small */
-        .navbar .badge {
-            padding: 0.25rem 0.5rem !important;
-            font-size: 0.75rem !important;
-            min-width: 20px;
-            height: 20px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
+	<link href="css/app.css" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+	<link href="css/custom.css" rel="stylesheet">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link href="../assets/css/style.css" rel="stylesheet">
+	<!-- DataTables CSS -->
+	<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+	<!-- Responsive extension CSS -->
+	<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.2.9/css/responsive.dataTables.min.css">
+	<style>
+		body { background-color: #f7f9fc; }
+		
+		.page-header {
+			background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+			color: white;
+			padding: 2rem;
+			border-radius: 14px;
+			margin-bottom: 2rem;
+			box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
+		}
+		
+		.page-header h1 {
+			font-weight: 700;
+			margin: 0;
+			font-size: 1.75rem;
+		}
+		
+		.stats-card {
+			background: white;
+			border-radius: 12px;
+			padding: 1.5rem;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+			margin-bottom: 1.5rem;
+			border-left: 4px solid;
+		}
+		
+		.stats-card.total { border-left-color: #3b82f6; }
+		.stats-card.pending { border-left-color: #f59e0b; }
+		.stats-card.completed { border-left-color: #10b981; }
+		.stats-card.cancelled { border-left-color: #ef4444; }
+		
+		.stats-number {
+			font-size: 2rem;
+			font-weight: 700;
+			margin: 0;
+		}
+		
+		.stats-label {
+			color: #6b7280;
+			font-size: 0.875rem;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+		}
+		
+		.card { border: none; border-radius: 14px; box-shadow: 0 6px 18px rgba(17,24,39,.06); }
+		.card-header { background: #fff; border-bottom: 1px solid #eef2f7; border-top-left-radius: 14px; border-top-right-radius: 14px; }
+		.card-title { font-weight: 600; color: #0f172a; }
 
-        /* Highlight order from notification */
-        .order-card.highlight-order {
-            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-            border: 2px solid #3b82f6;
-            box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
-            animation: pulse 2s ease-in-out 3;
-        }
+		.btn-primary { background: #2563eb; border-color: #2563eb; border-radius: 10px; box-shadow: 0 6px 14px rgba(37,99,235,.25); }
+		.btn-primary:hover { background: #1d4ed8; border-color: #1d4ed8; transform: translateY(-1px); }
 
-        @keyframes pulse {
-            0%, 100% {
-                box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
-            }
-            50% {
-                box-shadow: 0 8px 32px rgba(59, 130, 246, 0.45);
-            }
-        }
+		.orders-toolbar { gap: 12px; flex-wrap: wrap; }
+		.orders-toolbar .form-control, .orders-toolbar .form-select { border-radius: 10px; border: 1px solid #e5e7eb; }
+		.orders-toolbar .form-control:focus, .orders-toolbar .form-select:focus { box-shadow: 0 0 0 .2rem rgba(37,99,235,.2); border-color: #93c5fd; }
+		
+		/* Mobile responsive filters */
+		@media (max-width: 768px) {
+			.orders-toolbar { flex-direction: column; }
+			.orders-toolbar > div { width: 100% !important; max-width: 100% !important; min-width: 100% !important; }
+			.orders-toolbar .input-group { max-width: 100% !important; }
+		}
 
-        .order-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
+		.table thead th { background: #f1f5f9; color: #0f172a; font-weight: 600; border-bottom: 0; }
+		.table-hover tbody tr:hover { box-shadow: 0 6px 16px rgba(15,23,42,.05); }
 
-        .order-checkbox {
-            border-radius: 4px;
-            margin-right: 10px;
-        }
+		.badge-status { font-weight: 600; }
+		.badge-status.pending { background-color: #f59e0b; }
+		.badge-status.shipped { background-color: #3b82f6; }
+		.badge-status.delivered { background-color: #22c55e; }
+		.badge-status.cancelled { background-color: #ef4444; }
 
-        .sticky-controls {
-            position: sticky;
-            top: 56px; /* Assuming navbar height */
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid #e0e0e0;
-            z-index: 1020;
-            padding: 10px 0;
-        }
+		.badge-pill { border-radius: 9999px; padding: .35rem .6rem; font-weight: 600; }
+		.badge-cod { background: #6b7280; color: #fff; }
+		.badge-gcash { background: #8b5cf6; color: #fff; }
+		.badge-cc { background: #3b82f6; color: #fff; }
 
-        .order-image {
-            width: 80px;
-            height: 80px;
-            object-fit: cover;
-            border-radius: 8px;
-            border: 1px solid #ddd;
-        }
+		.amount-strong { font-weight: 800; color: #16a34a; }
 
-        .order-middle {
-            flex: 1;
-        }
+		.btn-icon { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; border: 1px solid #e5e7eb; background: #fff; color: #0f172a; transition: all .2s ease; }
+		.btn-icon:hover { box-shadow: 0 6px 14px rgba(2,6,23,.08); transform: translateY(-1px); }
+		.btn-icon.view { color: #2563eb; border-color: #bfdbfe; background: #eff6ff; }
+		.btn-icon.view:hover { background: #dbeafe; }
+		.btn-icon.delete { color: #ef4444; border-color: #fecaca; background: #fff1f2; }
+		.btn-icon.delete:hover { background: #ffe4e6; }
 
-        .order-right {
-            display: flex;
-            align-items: center;
-        }
-
-        .order-status {
-            margin: 4px 0;
-        }
-
-        .order-items {
-            align-items: flex-end;
-            gap: 8px;
-        }
-
-        .order-header {
-            font-weight: 600;
-            font-size: 16px;
-            color: #333;
-            margin-bottom: 8px;
-        }
-
-        .order-status-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .order-total {
-            font-weight: bold;
-            color: #F44336;
-        }
-
-        .btn-view-details {
-            background-color: #ee4d2d;
-            border: none;
-            color: white;
-            padding: 8px 16px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: all 0.2s ease-in-out;
-            transform: scale(1);
-        }
-
-        .btn-view-details:hover {
-            background-color: #d03c2a;
-            color: white;
-            text-decoration: none;
-            transform: scale(1.05);
-        }
-
-        /* Status badge colors */
-        .badge-delivered {
-            background-color: #4CAF50 !important;
-            color: white;
-        }
-
-        .badge-processing {
-            background-color: #3498db !important;
-            color: white;
-        }
-
-        .badge-pending {
-            background-color: #FF9800 !important;
-            color: white;
-        }
-
-        .badge-received {
-            background-color: #9b59b6 !important;
-            color: white;
-        }
-
-        .badge-cancelled {
-            background-color: #F44336 !important;
-            color: white;
-        }
-
-        .custom-navbar {
-            background: rgba(255, 255, 255, 0.95) !important;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .custom-navbar .nav-link {
-            color: #4a4a4a !important;
-            font-weight: 500;
-            padding: 0.8rem 1.2rem !important;
-            transition: color 0.3s ease;
-        }
-
-        .custom-navbar .nav-link:hover,
-        .custom-navbar .nav-link.active {
-            color: #6c63ff !important;
-        }
-
-        .custom-navbar .navbar-brand {
-            font-weight: 700;
-            color: #6c63ff !important;
-        }
-
-        .badge.cart-badge {
-            background-color: #6c63ff !important;
-            transition: transform 0.2s ease;
-        }
-
-        .badge.cart-badge:hover {
-            transform: scale(1.1);
-        }
-
-        /* Filters Container */
-        .filters-container {
-            background: white;
-            border-radius: 12px;
-            padding: 1.25rem;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-        }
-
-        /* Mobile Responsiveness */
-        @media (max-width: 768px) {
-            .container {
-                padding: 0 0.75rem;
-            }
-            
-            h4.mb-4 {
-                font-size: 1.25rem;
-                margin-bottom: 1rem !important;
-            }
-            
-            /* Stack filters vertically on mobile */
-            .d-flex.flex-wrap.align-items-center.gap-3 {
-                gap: 0.75rem !important;
-            }
-            
-            .d-flex.align-items-center.gap-2 {
-                flex: 1 1 100%;
-                min-width: 100%;
-            }
-            
-            .d-flex.align-items-center.gap-2 label {
-                min-width: 60px;
-                font-size: 0.9rem;
-                white-space: nowrap;
-            }
-            
-            .form-select-sm,
-            .form-control-sm {
-                font-size: 0.9rem !important;
-                padding: 0.5rem 0.75rem !important;
-                flex: 1;
-            }
-            
-            .flex-grow-1 {
-                flex: 1 1 100%;
-                min-width: 100%;
-            }
-            
-            .order-card {
-                flex-direction: column;
-                gap: 12px;
-                padding: 15px;
-            }
-            
-            .order-left {
-                align-self: flex-start;
-                width: 100%;
-                justify-content: center;
-            }
-            
-            .order-middle {
-                text-align: left;
-                width: 100%;
-            }
-            
-            .order-right {
-                align-items: center;
-                flex-direction: row;
-                justify-content: center;
-                width: 100%;
-            }
-            
-            .order-image {
-                width: 100%;
-                max-width: 200px;
-                height: auto;
-                aspect-ratio: 1;
-            }
-            
-            .order-header {
-                font-size: 1rem;
-            }
-            
-            .btn-view-details {
-                width: 100%;
-                padding: 10px 20px;
-                font-size: 0.95rem;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .container {
-                padding: 0 0.5rem;
-            }
-            
-            h4.mb-4 {
-                font-size: 1.1rem;
-            }
-            
-            .d-flex.align-items-center.gap-2 {
-                flex: 1 1 100%;
-                min-width: 100%;
-            }
-            
-            .d-flex.align-items-center.gap-2 label {
-                min-width: 50px;
-                font-size: 0.85rem;
-            }
-            
-            .form-select-sm,
-            .form-control-sm {
-                font-size: 0.85rem !important;
-                padding: 0.45rem 0.65rem !important;
-            }
-            
-            .order-card {
-                padding: 12px;
-                margin-bottom: 12px;
-            }
-            
-            .order-header {
-                font-size: 0.95rem;
-            }
-            
-            .order-status-row {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 0.5rem;
-            }
-            
-            .order-total {
-                font-size: 1.1rem;
-            }
-            
-            .btn-view-details {
-                padding: 9px 18px;
-                font-size: 0.9rem;
-            }
-        }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+		/* Hide default DataTables search box */
+		.dataTables_wrapper .dataTables_filter { display: none; }
+	</style>
 </head>
 
 <body>
-    <?php $active = 'orders'; ?>
-    <?php include 'includes/navbar_customer.php'; ?>
+	<div class="wrapper">
+		<?php $active = 'orders'; ?>
+		<?php require ('../includes/sidebar_admin.php');?>
 
-    <!-- Animated Header -->
-    <header class="orders-header">
-        <!-- Floating Shapes -->
-        <div style="position: absolute; top: 20%; left: 10%; width: 70px; height: 70px; background: rgba(251,191,36,0.3); border-radius: 50%; animation: float 6s ease-in-out infinite;"></div>
-        <div style="position: absolute; top: 50%; right: 15%; width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 50%; animation: float 8s ease-in-out infinite 1s;"></div>
-        <div style="position: absolute; bottom: 30%; left: 15%; width: 40px; height: 40px; background: rgba(251,191,36,0.4); transform: rotate(45deg); animation: float 7s ease-in-out infinite 2s;"></div>
-        <div style="position: absolute; top: 30%; right: 20%; width: 80px; height: 80px; border: 3px solid rgba(255,255,255,0.3); border-radius: 50%; animation: rotate 20s linear infinite;"></div>
-        
-        <div class="container" style="position: relative; z-index: 10;">
-            <h1 class="display-4 fw-bold mb-2" style="animation: fadeInUp 1s ease-out;">
-                <i class="bi bi-receipt me-3"></i>My Orders
-            </h1>
-            <p class="lead" style="animation: fadeInUp 1s ease-out 0.2s; animation-fill-mode: both;">Track and manage your orders</p>
-        </div>
-    </header>
+		<div class="main">
+			<?php require ('../includes/navbar_admin.php');?>
 
-    <div class="container py-5">
+			<main class="content">
+				<div class="container-fluid p-0">
+					<!-- Page Header -->
+					<div class="page-header">
+						<h1>
+							<i class="bi bi-box-seam me-2"></i>Order Management
+						</h1>
+						<p class="mb-0 mt-2" style="opacity: 0.9;">Track and manage all customer orders</p>
+					</div>
 
-        <!-- Filters and Sorting -->
-        <div class="d-flex flex-wrap align-items-center gap-3 mb-4">
-            <div class="d-flex align-items-center gap-2">
-                <label for="filterStatus" class="form-label mb-0 fw-semibold">Status:</label>
-                <select id="filterStatus" class="form-select form-select-sm">
-                    <option value="all" selected>All</option>
-                    <option value="pending">Pending</option>
-                    <option value="processing">Processing</option>
-                    <option value="shipping">Shipping</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
-                </select>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <label for="filterDateFrom" class="form-label mb-0 fw-semibold">From:</label>
-                <input type="date" id="filterDateFrom" class="form-control form-control-sm" />
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <label for="filterDateTo" class="form-label mb-0 fw-semibold">To:</label>
-                <input type="date" id="filterDateTo" class="form-control form-control-sm" />
-            </div>
-            <div class="flex-grow-1">
-                <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Search order ID or product name" />
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <label for="sortOrders" class="form-label mb-0 fw-semibold">Sort by:</label>
-                <select id="sortOrders" class="form-select form-select-sm">
-                    <option value="newest" selected>Newest → Oldest</option>
-                    <option value="oldest">Oldest → Newest</option>
-                    <option value="highest">Highest Price → Lowest Price</option>
-                    <option value="lowest">Lowest Price → Highest Price</option>
-                </select>
-            </div>
-        </div>
+					<?php
+					// Fetch order statistics - exact status match
+					$total_orders = $pdo->query("SELECT COUNT(*) FROM orders")->fetchColumn();
+					$pending_orders = $pdo->query("SELECT COUNT(*) FROM orders WHERE status = 'Pending'")->fetchColumn();
+					$processing_orders = $pdo->query("SELECT COUNT(*) FROM orders WHERE status = 'Processing'")->fetchColumn();
+					$completed_orders = $pdo->query("SELECT COUNT(*) FROM orders WHERE status IN ('Delivered', 'Received')")->fetchColumn();
+					$cancelled_orders = $pdo->query("SELECT COUNT(*) FROM orders WHERE status = 'Cancelled'")->fetchColumn();
+					?>
 
-        <div id="ordersContainer" class="d-flex flex-column gap-3">
-            <!-- Order cards will be rendered here -->
-        </div>
-        
-        <!-- Pagination Controls -->
-        <div id="paginationContainer" class="d-flex justify-content-center align-items-center gap-2 mt-4">
-            <!-- Pagination buttons will be rendered here -->
-        </div>
+					<!-- Statistics Cards -->
+					<div class="row g-3 mb-4">
+						<div class="col">
+							<div class="stats-card total h-100">
+								<div class="d-flex align-items-center mb-2">
+									<i class="bi bi-box-seam text-primary me-2" style="font-size: 1.5rem;"></i>
+									<p class="stats-label mb-0">Total</p>
+								</div>
+								<h2 class="stats-number text-primary"><?= $total_orders ?></h2>
+								<small class="text-muted">All orders</small>
+							</div>
+						</div>
+						<div class="col">
+							<div class="stats-card pending h-100">
+								<div class="d-flex align-items-center mb-2">
+									<i class="bi bi-clock-history text-warning me-2" style="font-size: 1.5rem;"></i>
+									<p class="stats-label mb-0">Pending</p>
+								</div>
+								<h2 class="stats-number text-warning"><?= $pending_orders ?></h2>
+								<small class="text-muted">Awaiting</small>
+							</div>
+						</div>
+						<div class="col">
+							<div class="stats-card h-100" style="border-left-color: #3b82f6;">
+								<div class="d-flex align-items-center mb-2">
+									<i class="bi bi-truck text-info me-2" style="font-size: 1.5rem;"></i>
+									<p class="stats-label mb-0">Processing</p>
+								</div>
+								<h2 class="stats-number text-info"><?= $processing_orders ?></h2>
+								<small class="text-muted">In transit</small>
+							</div>
+						</div>
+						<div class="col">
+							<div class="stats-card completed h-100">
+								<div class="d-flex align-items-center mb-2">
+									<i class="bi bi-check-circle-fill text-success me-2" style="font-size: 1.5rem;"></i>
+									<p class="stats-label mb-0">Completed</p>
+								</div>
+								<h2 class="stats-number text-success"><?= $completed_orders ?></h2>
+								<small class="text-muted">Delivered</small>
+							</div>
+						</div>
+						<div class="col">
+							<div class="stats-card cancelled h-100">
+								<div class="d-flex align-items-center mb-2">
+									<i class="bi bi-x-circle-fill text-danger me-2" style="font-size: 1.5rem;"></i>
+									<p class="stats-label mb-0">Cancelled</p>
+								</div>
+								<h2 class="stats-number text-danger"><?= $cancelled_orders ?></h2>
+								<small class="text-muted">Cancelled</small>
+							</div>
+						</div>
+					</div>
 
-        <div id="noOrdersMessage" class="text-center text-muted py-3" style="display: none;">
-            No orders yet — start shopping now!
-        </div>
-    </div>
+				<!-- Toolbar: search and filters -->
+				<div class="card mb-3">
+					<div class="card-body">
+						<div class="d-flex orders-toolbar">
+							<div class="input-group" style="max-width: 340px;">
+								<span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+								<input type="search" id="ordersSearch" class="form-control border-start-0" placeholder="Search orders...">
+							</div>
+							<div style="min-width: 200px;">
+								<select id="statusFilter" class="form-select">
+									<option value="all" selected>All Status</option>
+									<option value="Pending">Pending</option>
+									<option value="Processing">Processing</option>
+									<option value="Shipping">Shipping</option>
+									<option value="Delivered">Delivered</option>
+									<option value="Received">Received</option>
+									<option value="Cancelled">Cancelled</option>
+								</select>
+							</div>
+							<div style="min-width: 200px;">
+								<select id="customerTypeFilter" class="form-select">
+									<option value="all" selected>All Customers</option>
+									<option value="bulk">Wholesalers Only</option>
+									<option value="regular">Regular Customers Only</option>
+								</select>
+							</div>
+							<div>
+								<input type="date" id="dateFrom" class="form-control" placeholder="From">
+							</div>
+							<div>
+								<input type="date" id="dateTo" class="form-control" placeholder="To">
+							</div>
+							<div class="ms-auto" style="max-width: 260px;">
+								<input type="text" id="customerFilter" class="form-control" placeholder="Filter by customer name">
+							</div>
+						</div>
+					</div>
+				</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-    <script>
-        $(document).ready(function() {
-            fetchOrders();
+					<div class="row">
+						<div class="col-12">
+							<div class="card">
+								<div class="card-header">
+									<h5 class="card-title mb-0">Orders</h5>
+								</div>
+								<div class="card-body">
+									<div class="table-responsive" style="width:100%">
+										<table id="usersTable" class="display table table-hover align-middle w-100">
+											<thead>
+												<tr>
+													<th>Order</th>
+													<th>Order Date</th>
+													<th>Full Name</th>
+													<th>Contact Number</th>
+													<th>Shipping Address</th>
+													<th>Payment Method</th>
+													<th>Reference</th>
+													<th>Proof</th>
+													<th>Amount</th>
+													<th>Action</th>
+												</tr>
+											</thead>
+											<tbody>
+											</tbody>
+										</table>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
 
-            // Attach event listeners for filters
-            $('#filterStatus, #sortOrders').on('change', applyFiltersAndSort);
-            $('#filterDateFrom, #filterDateTo').on('change', applyFiltersAndSort);
-            
-            // Search input - debounced for better performance
-            let searchTimeout;
-            $('#filterSearch').on('input keyup', function() {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(function() {
-                    applyFiltersAndSort();
-                }, 300); // Wait 300ms after user stops typing
-            });
-        });
+				</div>
+			</main>
 
-        let allOrders = [];
-        let currentPage = 1;
-        const ordersPerPage = 5;
+			<footer class="footer">
+				<div class="container-fluid">
+					
+				</div>
+			</footer>
+		</div>
+	</div>
+	
 
-        function fetchOrders() {
-            $.ajax({
-                url: "backend/fetch_orders.php",
-                type: "GET",
-                data: {
-                    draw: 1,
-                    start: 0,
-                    length: 1000 // Fetch all orders for card display
-                },
-                success: function(response) {
-                    if (response && response.data && Array.isArray(response.data)) {
-                        allOrders = response.data; // Store all orders globally
-                        applyFiltersAndSort();
-                    } else {
-                        $('#ordersContainer').html('<p class="text-center text-danger">No orders data found.</p>');
-                    }
-                },
-                error: function() {
-                    $('#ordersContainer').html('<p class="text-center text-danger">Error loading orders.</p>');
-                }
-            });
-        }
+	<script src="js/app.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	
+	<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+	<!-- Responsive extension JS -->
+	<script src="https://cdn.datatables.net/responsive/2.2.9/js/dataTables.responsive.min.js"></script>
+	<!-- No modals required here; view navigates to dedicated page -->
+	
+	<script>
+	$(document).ready(function(){
+		function formatDate(str){
+			if(!str) return '-';
+			const d = new Date(str.replace(' ', 'T'));
+			if(isNaN(d)) return str;
+			const opts = { year:'numeric', month:'short', day:'numeric', hour:'numeric', minute:'2-digit' };
+			return d.toLocaleString(undefined, opts);
+		}
 
-        function renderOrderCard(order) {
-            const defaultImage = 'default.jpg'; // Adjust if needed
-            const highlightOrderId = <?= json_encode($highlight_order_id) ?>;
-            const isHighlighted = highlightOrderId && order.order_id == highlightOrderId;
-            
-            return `
-                <div class="order-card ${isHighlighted ? 'highlight-order' : ''}" id="order-${order.order_id}">
-                    <div class="order-left">
-                        <img src="uploads/products/${order.product_image || defaultImage}" alt="Product" class="order-image">
-                    </div>
-                    <div class="order-middle">
-                        <div class="order-header">#${order.order_id} - ${order.product_name}</div>
-                        <div class="order-status-row">
-                            <span class="order-status">${order.status}</span>
-                            <span class="order-total">${order.amount}</span>
-                        </div>
-                        <div class="order-items">
-                            ${order.item_count} item(s) • ${order.date}
-                        </div>
-                    </div>
-                    <div class="order-right">
-                        <a href="order_details.php?order_id=${order.order_id}" class="btn-view-details">View Details</a>
-                    </div>
-                </div>
-            `;
-        }
+		function statusBadge(status){
+			const map = {
+				'Pending': 'pending',
+				'Shipping': 'shipped',
+				'Processing': 'shipped',
+				'Delivered': 'delivered',
+				'Received': 'delivered',
+				'Cancelled': 'cancelled'
+			};
+			const cls = map[status] || 'pending';
+			return `<span class="badge badge-status ${cls} text-white">${status}</span>`;
+		}
 
-        function applyFiltersAndSort() {
-            let filtered = allOrders.filter(order => {
-                const statusFilter = $('#filterStatus').val().toLowerCase();
-                // Extract text from HTML badge (e.g., '<span class="badge badge-pending">Pending</span>' -> 'pending')
-                const statusText = order.status.replace(/<[^>]*>/g, '').toLowerCase();
-                const statusMatch = statusFilter === 'all' || statusText.includes(statusFilter);
+		function paymentPill(method){
+			const m = (method||'').toLowerCase();
+			if(m.includes('cod')) return '<span class="badge-pill badge-cod">COD</span>';
+			if(m.includes('gcash')) return '<span class="badge-pill badge-gcash">GCash</span>';
+			if(m.includes('bpi')) return '<span class="badge-pill badge-cc">BPI</span>';
+			if(m.includes('bdo')) return '<span class="badge-pill badge-cc">BDO</span>';
+			if(m.includes('credit')) return '<span class="badge-pill badge-cc">Credit Card</span>';
+			return `<span class="badge-pill badge-cod">${method||'-'}</span>`;
+		}
 
-                const dateFrom = $('#filterDateFrom').val();
-                const dateTo = $('#filterDateTo').val();
-                const orderDate = new Date(order.sort_date);
-                const fromMatch = !dateFrom || orderDate >= new Date(dateFrom);
-                const toMatch = !dateTo || orderDate <= new Date(dateTo + 'T23:59:59');
+		function proofIcon(proof, payment_method){
+			const onlineMethods = ['GCash', 'GCash1', 'GCash2', 'BPI', 'BDO'];
+			const isOnline = onlineMethods.some(m => payment_method.includes(m));
+			
+			if (!isOnline) {
+				return '<span class="text-muted small">N/A</span>';
+			}
+			
+			if (proof && proof.trim() !== '') {
+				return '<i class="bi bi-check-circle-fill text-success" title="Proof uploaded"></i>';
+			} else {
+				return '<i class="bi bi-exclamation-circle-fill text-warning" title="No proof"></i>';
+			}
+		}
 
-                const search = $('#filterSearch').val().toLowerCase();
-                const productName = (order.product_name || '').toLowerCase();
-                const searchMatch = !search || 
-                    order.order_id.toString().includes(search) || 
-                    productName.includes(search);
+		const table = $('#usersTable').DataTable({
+			processing: true,
+			serverSide: true,
+			responsive: true,
+			pageLength: 5,
+			lengthMenu: [[5, 10, 25, 50, 100], [5, 10, 25, 50, 100]],
+			ajax: {
+				url: 'backend/fetch_orders.php',
+				data: function(d){
+					d.status = $('#statusFilter').val();
+					d.customer_type = $('#customerTypeFilter').val();
+					d.date_from = $('#dateFrom').val();
+					d.date_to = $('#dateTo').val();
+					d.customer = $('#customerFilter').val();
+				}
+			},
+			order: [[1, 'desc']],
+			lengthChange: true,
+			dom: 'l<"toolbar">frtip',
+			columns: [
+				{ data: 'order_id', render: function(data, type, row){
+					let html = `<div><span class="fw-semibold text-dark">#${data}</span></div><div class="mt-1">${statusBadge(row.status)}`;
+					
+					// Add cancellation badge if exists
+					if (row.cancellation_status) {
+						if (row.cancellation_status === 'pending') {
+							html += ` <span class="badge bg-warning text-dark ms-1" style="font-size:0.7rem"><i class="bi bi-clock"></i> Cancel Pending</span>`;
+						} else if (row.cancellation_status === 'approved') {
+							html += ` <span class="badge bg-success ms-1" style="font-size:0.7rem"><i class="bi bi-check-circle"></i> Cancel Approved</span>`;
+						} else if (row.cancellation_status === 'rejected') {
+							html += ` <span class="badge bg-danger ms-1" style="font-size:0.7rem"><i class="bi bi-x-circle"></i> Cancel Rejected</span>`;
+						}
+					}
+					
+					html += `</div>`;
+					return html;
+				}},
+				{ data: 'date', render: function(d){ return formatDate(d); } },
+				{ data: 'fullname' },
+				{ data: 'contact_number' },
+				{ data: 'shipping_address' },
+				{ data: 'payment_method', render: function(d){ return paymentPill(d); } },
+				{ data: 'payment_reference', orderable: false, className: 'text-center', render: function(d, t, row){
+					if (d && ['GCash1', 'GCash2', 'BPI', 'BDO'].includes(row.payment_method)) {
+						return `<span style="font-family: monospace; font-size: 0.8rem; background: #f3f4f6; padding: 2px 6px; border-radius: 4px;" title="Reference Number">${d}</span>`;
+					}
+					return '';
+				}},
+				{ data: null, orderable: false, className: 'text-center', render: function(d, t, row){
+					return proofIcon(row.proof_of_payment, row.payment_method);
+				}},
+				{ data: 'amount', render: function(v){
+					const num = parseFloat(v||0);
+					return `<span class="amount-strong">₱${num.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}</span>`;
+				}},
+				{ data: null, orderable: false, className: 'text-nowrap', render: function(d, t, row){
+					let buttons = `<div class="d-flex gap-1 align-items-center">`;
+					
+					// View Order button
+					buttons += `<a class="btn btn-sm btn-icon view" title="View Order" href="view_order.php?order_id=${row.order_id}">👁</a>`;
+					
+					// Add "View Cancellation Request" button if there's a pending cancellation
+					if (row.cancellation_status === 'pending') {
+						buttons += `
+						<a class="btn btn-sm btn-warning text-white" title="View Cancellation Request" href="cancellation_requests.php#order-${row.order_id}" style="font-size:0.7rem; padding:0.3rem 0.6rem; white-space: nowrap;">
+							<i class="bi bi-exclamation-circle-fill"></i> View Cancel
+						</a>`;
+					}
+					
+					// Delete button
+					buttons += `<button type="button" class="btn btn-sm btn-icon delete delete-btn" title="Delete" data-order-id="${row.order_id}">🗑</button>`;
+					
+					buttons += `</div>`;
+					return buttons;
+				}}
+			],
+			columnDefs: [
+				{ targets: [7, 9], orderable: false }
+			]
+		});
 
-                return statusMatch && fromMatch && toMatch && searchMatch;
-            });
+		// Custom search
+		$('#ordersSearch').on('input', function(){ table.search(this.value).draw(); });
+		// Filters
+		$('#statusFilter, #customerTypeFilter, #dateFrom, #dateTo, #customerFilter').on('change input', function(){ table.draw(); });
 
-            const sort = $('#sortOrders').val();
-            if (sort === 'newest') {
-                filtered.sort((a, b) => new Date(b.sort_date) - new Date(a.sort_date));
-            } else if (sort === 'oldest') {
-                filtered.sort((a, b) => new Date(a.sort_date) - new Date(b.sort_date));
-            } else if (sort === 'highest') {
-                filtered.sort((a, b) => parseFloat(b.amount.replace('₱', '').replace(',', '')) - parseFloat(a.amount.replace('₱', '').replace(',', '')));
-            } else if (sort === 'lowest') {
-                filtered.sort((a, b) => parseFloat(a.amount.replace('₱', '').replace(',', '')) - parseFloat(b.amount.replace('₱', '').replace(',', '')));
-            }
+		// Delete handler
+		$('#usersTable').on('click', '.delete-btn', function(){
+			const rowEl = $(this).closest('tr');
+			const order_id = $(this).data('order-id');
+			Swal.fire({
+				title: 'Are you sure?',
+				text: "You won't be able to revert this action!",
+				icon: 'warning',
+				showCancelButton: true,
+				confirmButtonColor: '#d33',
+				cancelButtonColor: '#3085d6',
+				confirmButtonText: 'Yes, delete it!',
+				cancelButtonText: 'No, cancel!'
+			}).then((result)=>{
+				if(result.isConfirmed){
+					$.ajax({
+						url: 'backend/delete_order.php',
+						method: 'POST',
+						data: { order_id },
+						success: function(resp){
+							if(resp === 'success'){
+								Swal.fire('Deleted!', 'The order has been deleted.', 'success');
+								$('#usersTable').DataTable().row(rowEl).remove().draw(false);
+							}else{
+								Swal.fire('Error!', 'There was a problem deleting the order.', 'error');
+							}
+						},
+						error: function(){ Swal.fire('Error!', 'An unexpected error occurred.', 'error'); }
+					});
+				}
+			});
+		});
+	});
+	</script>
 
-            // Pagination logic
-            const totalPages = Math.ceil(filtered.length / ordersPerPage);
-            const startIndex = (currentPage - 1) * ordersPerPage;
-            const endIndex = startIndex + ordersPerPage;
-            const paginatedOrders = filtered.slice(startIndex, endIndex);
-            
-            const html = paginatedOrders.map(renderOrderCard).join('');
-            $('#ordersContainer').html(html);
-            $('#noOrdersMessage').toggle(filtered.length === 0);
-            
-            // Render pagination controls
-            renderPagination(totalPages, filtered.length);
-
-            // Auto-scroll to highlighted order
-            const highlightOrderId = <?= json_encode($highlight_order_id) ?>;
-            if (highlightOrderId) {
-                setTimeout(() => {
-                    const highlightedOrder = document.getElementById('order-' + highlightOrderId);
-                    if (highlightedOrder) {
-                        highlightedOrder.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }
-                }, 500);
-            }
-        }
-        
-        function renderPagination(totalPages, totalOrders) {
-            if (totalPages <= 1) {
-                $('#paginationContainer').html('');
-                return;
-            }
-            
-            let paginationHTML = `
-                <button class="btn btn-sm btn-outline-primary" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
-                    <i class="bi bi-chevron-left"></i> Previous
-                </button>
-                <span class="mx-3">Page ${currentPage} of ${totalPages} (${totalOrders} orders)</span>
-                <button class="btn btn-sm btn-outline-primary" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
-                    Next <i class="bi bi-chevron-right"></i>
-                </button>
-            `;
-            
-            $('#paginationContainer').html(paginationHTML);
-        }
-        
-        function changePage(page) {
-            const totalPages = Math.ceil(allOrders.length / ordersPerPage);
-            if (page < 1 || page > totalPages) return;
-            
-            currentPage = page;
-            applyFiltersAndSort();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-    </script>
-<?php if(isset($success_message)): ?>
+	<?php if(isset($success_message)): ?>
         <script>
             Swal.fire({
                 icon: 'success',
@@ -729,7 +491,8 @@
         </script>
     <?php endif; ?>
 
-    
+
+
 </body>
 
 </html>

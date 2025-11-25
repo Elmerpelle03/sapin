@@ -1,1955 +1,1160 @@
 <?php 
-    require ('config/db.php');
-    session_start();
-    require('config/session_disallow_courier.php');
-
-    if(isset($_SESSION['success_message'])){
-        $success_message = $_SESSION['success_message'];
-        unset($_SESSION['success_message']);
-    }
-    elseif(isset($_SESSION['error_message'])){
-        $error_message = $_SESSION['error_message'];
-        unset($_SESSION['error_message']);
-    }
-    
-    // Get user discount rate for wholesalers
-    $user_discount = 0;
-    $is_bulk_buyer = false;
-    if(isset($_SESSION['user_id'])){
-        $user_stmt = $pdo->prepare("SELECT usertype_id, discount_rate FROM users WHERE user_id = :user_id");
-        $user_stmt->execute([':user_id' => $_SESSION['user_id']]);
-        $user_info = $user_stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if($user_info && $user_info['usertype_id'] == 3){
-            $is_bulk_buyer = true;
-            $user_discount = $user_info['discount_rate'];
-        }
-    }
+    require ('../config/session_admin.php');
+    require ('../config/db.php');
+	$date = date("Y-m-d");
+	
+	// Fetch user type name
+	$user_role = 'Admin'; // Default
+	if (isset($_SESSION['usertype_id'])) {
+		$stmt = $pdo->prepare("SELECT usertype_name FROM usertype WHERE usertype_id = :usertype_id");
+		$stmt->execute([':usertype_id' => $_SESSION['usertype_id']]);
+		$result = $stmt->fetch(PDO::FETCH_ASSOC);
+		if ($result) {
+			$user_role = $result['usertype_name'];
+		}
+	}
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Premium Quality Home Textiles - SAPIN</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-    <!-- Custom CSS -->
-    <style>
-        :root {
-            --primary-color: #2563eb;
-            --secondary-color: #f59e0b;
-            --light-bg: #f8fafc;
-            --border-color: #e2e8f0;
-            --accent-color: #ffffff;
-        }
-        
-        body {
-            background: linear-gradient(120deg, var(--light-bg) 0%, var(--accent-color) 100%);
-            min-height: 100vh;
-        }
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+	<meta name="description" content="Responsive Admin &amp; Dashboard Template based on Bootstrap 5">
+	<meta name="author" content="AdminKit">
+	<meta name="keywords" content="adminkit, bootstrap, bootstrap 5, admin, dashboard, template, responsive, css, sass, html, theme, front-end, ui kit, web">
 
-        .navbar-brand {
-            color: var(--primary-color) !important;
-            font-weight: 700;
-            font-size: 1.5rem;
-        }
+	<link rel="preconnect" href="https://fonts.gstatic.com">
+	<link rel="shortcut icon" href="img/icons/icon-48x48.png" />
 
-        .btn-primary {
-            background: linear-gradient(90deg, var(--primary-color) 60%, var(--secondary-color) 100%);
-            border: none;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
+	<link rel="canonical" href="https://demo-basic.adminkit.io/" />
 
-        .btn-primary:hover {
-            background: linear-gradient(90deg, var(--secondary-color) 60%, var(--primary-color) 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
-        }
-        
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-        
-        .btn-hero {
-            padding: 1rem 3rem;
-            font-size: 1.1rem;
-            font-weight: 600;
-            border-radius: 50px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        }
-        
-        .btn-hero:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
-        }
+	<title>Dashboard - Sapin Bedsheets</title>
 
-        .text-primary {
-            color: var(--primary-color) !important;
-        }
+	<link href="css/app.css" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+	<link href="css/custom.css" rel="stylesheet">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
+	<link href="../assets/css/style.css" rel="stylesheet">
+	<style>
+		/* Global theme with gradient background */
+		body { 
+			background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+			min-height: 100vh;
+		}
+		
+		/* Enhanced page header */
+		.page-header {
+			background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+			margin: -24px -24px 24px -24px;
+			padding: 32px 24px;
+			border-radius: 0 0 24px 24px;
+			box-shadow: 0 8px 32px rgba(102, 126, 234, 0.2);
+			color: white;
+		}
+		
+		.page-header h1 {
+			font-weight: 800;
+			font-size: 2rem;
+			margin: 0;
+			text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		}
+		
+		.page-header p {
+			margin: 8px 0 0 0;
+			opacity: 0.9;
+			font-size: 0.95rem;
+		}
+		
+		.card { 
+			border: none; 
+			border-radius: 20px; 
+			box-shadow: 0 4px 20px rgba(17,24,39,.06); 
+			transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+			overflow: hidden;
+			background: white;
+			backdrop-filter: blur(10px);
+		}
+		
+		.card:hover { 
+			transform: translateY(-8px) scale(1.01); 
+			box-shadow: 0 20px 40px rgba(17,24,39,.12); 
+		}
+		
+		.card-header { 
+			background: linear-gradient(to bottom, #ffffff 0%, #fafbfc 100%); 
+			border-bottom: 2px solid #f1f5f9; 
+			border-top-left-radius: 20px; 
+			border-top-right-radius: 20px;
+			padding: 20px 24px;
+		}
+		
+		.card-title { 
+			font-weight: 700; 
+			color: #0f172a;
+			font-size: 1.125rem;
+		}
 
-        .bg-primary {
-            background-color: var(--primary-color) !important;
-        }
+		/* Financial Overview Header */
+		.financial-header {
+			background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+			color: white;
+			border: none;
+			border-radius: 16px;
+			padding: 20px 24px;
+			box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+			animation: slideDown 0.5s ease-out;
+		}
+		
+		@keyframes slideDown {
+			from { opacity: 0; transform: translateY(-20px); }
+			to { opacity: 1; transform: translateY(0); }
+		}
 
-        .card {
-            border-radius: 1rem;
-            border: 1.5px solid var(--border-color);
-            box-shadow: 0 4px 24px 0 rgba(37,99,235,0.1);
-            transition: all 0.3s ease;
-        }
-        
-        .card:hover {
-            transform: translateY(-8px);
-            box-shadow: 0 12px 40px rgba(37,99,235,0.2);
-        }
-        
-        /* Enhanced Feature Cards */
-        .feature-card {
-            background: white;
-            padding: 2.5rem 1.5rem;
-            border-radius: 20px;
-            text-align: center;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 2px solid #e5e7eb;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-            transform: scaleX(0);
-            transition: transform 0.3s ease;
-        }
-        
-        .feature-card:hover::before {
-            transform: scaleX(1);
-        }
-        
-        .feature-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 16px 48px rgba(37, 99, 235, 0.15);
-            border-color: var(--primary-color);
-        }
-        
-        .feature-icon {
-            font-size: 3rem;
-            margin-bottom: 1.5rem;
-            display: inline-block;
-            transition: transform 0.3s ease;
-        }
-        
-        .feature-card:hover .feature-icon {
-            transform: scale(1.1) rotate(5deg);
-        }
-        
-        /* Section Titles */
-        .section-title {
-            position: relative;
-            display: inline-block;
-        }
-        
-        .section-divider {
-            width: 100px;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-            margin: 1rem auto;
-            border-radius: 2px;
-            animation: expand 0.8s ease-out;
-        }
-        
-        @keyframes expand {
-            from { width: 0; }
-            to { width: 100px; }
-        }
-        
-        /* Product Cards Enhancement */
-        .product-card-enhanced {
-            border-radius: 20px;
-            overflow: hidden;
-            transition: all 0.4s ease;
-            border: none;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-        }
-        
-        .product-card-enhanced:hover {
-            transform: translateY(-12px);
-            box-shadow: 0 20px 60px rgba(37, 99, 235, 0.2);
-        }
-        
-        .product-card-enhanced img {
-            transition: transform 0.6s ease;
-        }
-        
-        .product-card-enhanced:hover img {
-            transform: scale(1.1);
-        }
-        
-        /* Stats Section */
-        .stats-card {
-            background: white;
-            padding: 2rem;
-            border-radius: 16px;
-            text-align: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-            transition: all 0.3s ease;
-        }
-        
-        .stats-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 30px rgba(37, 99, 235, 0.15);
-        }
-        
-        .stats-number {
-            font-size: 3rem;
-            font-weight: 700;
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-    </style>
-    <style>
-        .hero-section { 
-            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 25%, #3b82f6 50%, #f59e0b 75%, #fbbf24 100%);
-            background-size: 300% 300%;
-            animation: gradientShift 12s ease infinite;
-            background-position: center;
-            color: white;
-            text-align: center;
-            padding: 8rem 0;
-            min-height: 80vh;
-            display: flex;
-            align-items: center;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .bg-pattern {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            opacity: 0.25;
-            background-image: 
-                linear-gradient(45deg, rgba(30, 58, 138, 0.15) 25%, transparent 25%, transparent 50%, rgba(30, 58, 138, 0.15) 50%, rgba(30, 58, 138, 0.15) 75%, transparent 75%, transparent),
-                linear-gradient(-45deg, rgba(30, 58, 138, 0.15) 25%, transparent 25%, transparent 50%, rgba(30, 58, 138, 0.15) 50%, rgba(30, 58, 138, 0.15) 75%, transparent 75%, transparent);
-            background-size: 40px 40px;
-            animation: patternMove 30s linear infinite;
-        }
-        
-        .geometric-shapes {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            z-index: 0;
-        }
-        
-        .shape {
-            position: absolute;
-            opacity: 0.1;
-            border-radius: 50%;
-            filter: blur(20px);
-            animation: float 15s ease-in-out infinite;
-        }
-        
-        .shape-1 {
-            width: 350px;
-            height: 350px;
-            background: linear-gradient(45deg, #1e40af, #3b82f6);
-            top: -100px;
-            right: -50px;
-            opacity: 0.4;
-            filter: blur(25px);
-            animation: float 20s ease-in-out infinite;
-        }
-        
-        .shape-2 {
-            width: 200px;
-            height: 200px;
-            background: linear-gradient(45deg, #f59e0b, #fbbf24);
-            bottom: -50px;
-            left: -50px;
-            animation-delay: -5s;
-        }
-        
-        .shape-3 {
-            width: 200px;
-            height: 200px;
-            background: linear-gradient(45deg, #1d4ed8, #60a5fa);
-            top: 40%;
-            left: 20%;
-            opacity: 0.3;
-            filter: blur(20px);
-            animation-delay: -8s;
-            animation-duration: 25s;
-        }
-        
-        .shape-4 {
-            width: 150px;
-            height: 150px;
-            background: linear-gradient(45deg, #1e40af, #3b82f6);
-            bottom: 10%;
-            right: 15%;
-            opacity: 0.35;
-            filter: blur(25px);
-            animation-delay: -5s;
-            animation-duration: 20s;
-        }
-        
-        /* Additional blue accent elements */
-        .blue-accent {
-            position: absolute;
-            background: linear-gradient(90deg, rgba(30, 58, 138, 0.4), rgba(59, 130, 246, 0.4));
-            border-radius: 50%;
-            filter: blur(15px);
-            z-index: 0;
-        }
-        
-        .accent-1 {
-            width: 400px;
-            height: 400px;
-            top: -200px;
-            right: -100px;
-            opacity: 0.3;
-            animation: pulse 15s ease-in-out infinite alternate;
-        }
-        
-        .accent-2 {
-            width: 600px;
-            height: 600px;
-            bottom: -300px;
-            left: -200px;
-            opacity: 0.2;
-            animation: pulse 20s ease-in-out infinite alternate-reverse;
-        }
-        
-        .accent-3 {
-            width: 500px;
-            height: 500px;
-            top: 30%;
-            right: -150px;
-            opacity: 0.25;
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.5), rgba(251, 191, 36, 0.5));
-            filter: blur(40px);
-            animation: pulse 25s ease-in-out infinite alternate;
-            z-index: 0;
-        }
-        
-        /* Additional floating elements */
-        .floating-dots {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 0;
-        }
-        
-        .dot {
-            position: absolute;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.15);
-            animation: floatDot var(--duration) ease-in-out infinite;
-            animation-delay: var(--delay);
-            opacity: 0.6;
-        }
-        
-        .dot.blue {
-            background: rgba(59, 130, 246, 0.4);
-            box-shadow: 0 0 15px 5px rgba(59, 130, 246, 0.2);
-        }
-        
-        .dot.yellow {
-            background: rgba(245, 158, 11, 0.4);
-            box-shadow: 0 0 15px 5px rgba(245, 158, 11, 0.2);
-        }
-        
-        @keyframes floatDot {
-            0%, 100% {
-                transform: translate(0, 0) scale(1);
-                opacity: 0.4;
-            }
-            50% {
-                transform: translate(20px, -20px) scale(1.2);
-                opacity: 0.8;
-            }
-        }
-        
-        
-        @keyframes patternMove {
-            0% { background-position: 0 0; }
-            100% { background-position: 100px 100px; }
-        }
-        
-        @keyframes float {
-            0%, 100% {
-                transform: translate(0, 0) rotate(0deg);
-            }
-            25% {
-                transform: translate(20px, 20px) rotate(5deg);
-            }
-            50% {
-                transform: translate(0, 40px) rotate(0deg);
-            }
-            75% {
-                transform: translate(-20px, 20px) rotate(-5deg);
-            }
-        }
-        
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        
-        /* Floating Fabric/Bedsheet Elements */
-        .fabric-wave {
-            position: absolute;
-            width: 100%;
-            height: 200px;
-            opacity: 0.1;
-            will-change: transform;
-        }
-        
-        .fabric-wave-1 {
-            bottom: 0;
-            left: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
-            clip-path: ellipse(80% 50% at 50% 100%);
-            animation: wave 8s ease-in-out infinite;
-            opacity: 0.3;
-        }
-        
-        .fabric-wave-2 {
-            bottom: 50px;
-            left: 0;
-            background: linear-gradient(90deg, transparent, rgba(251,191,36,0.5), transparent);
-            clip-path: ellipse(70% 40% at 50% 100%);
-            animation: wave 10s ease-in-out infinite reverse;
-            opacity: 0.3;
-        }
-        
-        @keyframes wave {
-            0%, 100% { transform: translateX(-20%) scaleY(1); }
-            50% { transform: translateX(20%) scaleY(1.3); }
-        }
-        
-        /* Scroll Reveal Animation */
-        .scroll-reveal {
-            opacity: 0;
-            transform: translateY(50px);
-            transition: all 0.8s ease-out;
-        }
-        
-        .scroll-reveal.active {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        
-        /* Floating Stars/Sparkles (representing comfort/quality) */
-        .sparkle {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            background: rgba(251, 191, 36, 0.8);
-            border-radius: 50%;
-            animation: twinkle linear infinite;
-            box-shadow: 0 0 10px rgba(251, 191, 36, 0.5);
-        }
-        
-        .sparkle-1 {
-            top: 20%;
-            left: 15%;
-            animation-duration: 3s;
-        }
-        
-        .sparkle-2 {
-            top: 40%;
-            left: 85%;
-            animation-duration: 4s;
-            animation-delay: 1s;
-        }
-        
-        .sparkle-3 {
-            top: 60%;
-            left: 25%;
-            animation-duration: 5s;
-            animation-delay: 2s;
-        }
-        
-        .sparkle-4 {
-            top: 30%;
-            left: 70%;
-            animation-duration: 3.5s;
-            animation-delay: 0.5s;
-        }
-        
-        @keyframes twinkle {
-            0%, 100% { 
-                opacity: 0;
-                transform: scale(0);
-            }
-            50% { 
-                opacity: 1;
-                transform: scale(1.5);
-            }
-        }
-        
-        /* Decorative Circles (representing comfort bubbles) */
-        .comfort-circle {
-            position: absolute;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-            animation: float-up 20s linear infinite;
-        }
-        
-        .circle-1 {
-            width: 100px;
-            height: 100px;
-            bottom: -100px;
-            left: 10%;
-            animation-duration: 15s;
-        }
-        
-        .circle-2 {
-            width: 150px;
-            height: 150px;
-            bottom: -150px;
-            left: 60%;
-            animation-duration: 20s;
-            animation-delay: 5s;
-        }
-        
-        .circle-3 {
-            width: 80px;
-            height: 80px;
-            bottom: -80px;
-            left: 85%;
-            animation-duration: 18s;
-            animation-delay: 10s;
-        }
-        
-        @keyframes float-up {
-            0% {
-                transform: translateY(0) scale(1);
-                opacity: 0;
-            }
-            10% {
-                opacity: 0.3;
-            }
-            90% {
-                opacity: 0.3;
-            }
-            100% {
-                transform: translateY(-100vh) scale(1.5);
-                opacity: 0;
-            }
-        }
-        
-        .hero-section::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: 
-                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%);
-            animation: float 20s ease-in-out infinite;
-        }
-        
-        .hero-section::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 100px;
-            background: linear-gradient(to top, rgba(0,0,0,0.1), transparent);
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-30px); }
-        }
-        
-        @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
-        
-        /* Pulsing Button Effect */
-        .btn-hero {
-            animation: pulse-btn 2s ease-in-out infinite;
-        }
-        
-        @keyframes pulse-btn {
-            0%, 100% { transform: scale(1); box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); }
-            50% { transform: scale(1.05); box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3); }
-        }
-        
-        .hero-content {
-            position: relative;
-            z-index: 1;
-            animation: fadeInUp 1s ease-out;
-        }
-        
-        @keyframes fadeInUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .feature-card {
-            padding: 2.5rem 2rem;
-            text-align: center;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 2px solid #e5e7eb;
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            box-shadow: 0 4px 16px rgba(37,99,235,0.08);
-            border-radius: 1.25rem;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(37,99,235,0.08), transparent);
-            transition: left 0.6s ease;
-        }
-        
-        .feature-card::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-            transform: scaleX(0);
-            transition: transform 0.4s ease;
-        }
-        
-        .feature-card:hover::before {
-            left: 100%;
-        }
-        
-        .feature-card:hover::after {
-            transform: scaleX(1);
-        }
-        
-        .feature-card:hover {
-            transform: translateY(-12px) scale(1.02);
-            box-shadow: 0 16px 32px rgba(37,99,235,0.15);
-            border-color: rgba(37,99,235,0.3);
-        }
-        
-        .feature-icon {
-            font-size: 3rem;
-            color: var(--primary-color);
-            margin-bottom: 1.5rem;
-            transition: all 0.3s ease;
-        }
-        
-        .feature-card:hover .feature-icon {
-            transform: scale(1.1) rotate(5deg);
-            color: var(--secondary-color);
-        }
-        
-        .product-card {
-            border: 2px solid #e5e7eb;
-            border-radius: 1rem;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 16px rgba(37,99,235,0.08);
-            overflow: hidden;
-            position: relative;
-            background: white;
-        }
-        
-        .product-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 4px;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-            transform: scaleX(0);
-            transition: transform 0.4s ease;
-        }
-        
-        .product-card:hover::before {
-            transform: scaleX(1);
-        }
-        
-        .product-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 16px 32px rgba(37,99,235,0.15);
-            border-color: rgba(37,99,235,0.3);
-        }
-        
-        .product-card img {
-            transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .product-card:hover img {
-            transform: scale(1.08);
-        }
-        
-        .testimonial-card {
-            background: rgba(255,255,255,0.9);
-            border-radius: 1rem;
-            padding: 2rem;
-            margin: 1rem;
-            box-shadow: 0 0.5rem 1rem rgba(37,99,235,0.1);
-        }
-        
-        .swiper-container {
-            padding: 2rem 0;
-        }
+		/* Financial Metric Cards */
+		.financial-card {
+			position: relative;
+			overflow: hidden;
+			transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+		}
+		
+		.financial-card::before {
+			content: '';
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: linear-gradient(135deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.1) 100%);
+			opacity: 0;
+			transition: opacity 0.3s ease;
+		}
+		
+		.financial-card:hover::before {
+			opacity: 1;
+		}
+		
+		.financial-card:hover {
+			transform: translateY(-8px) scale(1.02);
+			box-shadow: 0 16px 32px rgba(17,24,39,.2);
+		}
+		
+		.financial-card .card-body {
+			padding: 24px;
+		}
+		
+		.financial-card h3 {
+			font-size: 2rem;
+			font-weight: 800;
+			margin: 8px 0;
+			letter-spacing: -0.5px;
+		}
+		
+		.financial-card .metric-label {
+			font-size: 0.75rem;
+			font-weight: 700;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			margin-bottom: 4px;
+		}
+		
+		.financial-card .metric-subtitle {
+			font-size: 0.813rem;
+			opacity: 0.7;
+		}
 
-        .cta-section {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            color: white;
-            padding: 5rem 0;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .cta-section::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -10%;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
-            animation: pulse 4s ease-in-out infinite;
-        }
-        
-        .cta-section::after {
-            content: '';
-            position: absolute;
-            bottom: -30%;
-            left: -10%;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
-            animation: pulse 5s ease-in-out infinite reverse;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1) rotate(0deg); opacity: 0.5; }
-            50% { transform: scale(1.15) rotate(5deg); opacity: 0.3; }
-        }
-    </style>
-     <style>
-        .text-warning i {
-            color: #ffc107;
-            font-size: 1.1rem;
-            vertical-align: middle;
-        }
-        .custom-navbar {
-            background: rgba(255, 255, 255, 0.95) !important;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-    
-        .custom-navbar .nav-link {
-            color: #4a4a4a !important;
-            font-weight: 500;
-            padding: 0.8rem 1.2rem !important;
-            transition: color 0.3s ease;
-        }
-    
-        .custom-navbar .nav-link:hover,
-        .custom-navbar .nav-link.active {
-            color: var(--primary-color) !important;
-        }
-    
-        .custom-navbar .navbar-brand {
-            font-weight: 700;
-            color: #2563eb !important;
-        }
-    
-        .badge.cart-badge {
-            background-color: #2563eb !important;
-            transition: transform 0.2s ease;
-        }
-    
-        .badge.cart-badge:hover {
-            transform: scale(1.1);
-        }
-        
-        /* Mobile Responsiveness */
-        @media (max-width: 768px) {
-            .hero-section {
-                height: 60vh;
-                padding: 2rem 0;
-            }
-            .hero-section h1 {
-                font-size: 2rem !important;
-            }
-            .hero-section p {
-                font-size: 1rem !important;
-            }
-            .feature-card {
-                padding: 1.5rem;
-                margin-bottom: 1.5rem;
-            }
-            .feature-icon {
-                font-size: 2rem;
-            }
-            .navbar-brand span {
-                font-size: 1.1rem !important;
-            }
-            .custom-navbar .nav-link {
-                padding: 0.5rem 0.8rem !important;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .hero-section {
-                height: 50vh;
-                padding: 1rem 0;
-            }
-            .hero-section h1 {
-                font-size: 1.5rem !important;
-            }
-            .hero-section p {
-                font-size: 0.9rem !important;
-            }
-            .feature-card {
-                padding: 1rem;
-            }
-            .feature-icon {
-                font-size: 1.8rem;
-            }
-            .cta-section {
-                padding: 2rem 0 !important;
-            }
-            .cta-section h2 {
-                font-size: 1.5rem !important;
-            }
-            .container {
-                padding: 0 1rem;
-            }
-            .navbar-brand span {
-                font-size: 1rem !important;
-            }
-        }
-    </style>
-    <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css">
+		/* Icon circles with pulse animation */
+		.icon-circle { 
+			width: 56px; 
+			height: 56px; 
+			display: flex; 
+			align-items: center; 
+			justify-content: center; 
+			border-radius: 16px;
+			transition: all 0.3s ease;
+			position: relative;
+		}
+		
+		.financial-card:hover .icon-circle {
+			transform: rotate(10deg) scale(1.1);
+		}
+		
+		.icon-circle::after {
+			content: '';
+			position: absolute;
+			width: 100%;
+			height: 100%;
+			border-radius: 16px;
+			animation: pulse 2s infinite;
+			opacity: 0;
+		}
+		
+		@keyframes pulse {
+			0% { transform: scale(1); opacity: 0.5; }
+			50% { transform: scale(1.1); opacity: 0; }
+			100% { transform: scale(1); opacity: 0; }
+		}
+		
+		.icon-blue { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); color: #2563eb; }
+		.icon-green { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color: #059669; }
+		.icon-yellow { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #d97706; }
+		.icon-red { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color: #dc2626; }
+		
+		.icon-blue::after { background: #2563eb; }
+		.icon-green::after { background: #059669; }
+		.icon-yellow::after { background: #d97706; }
+		.icon-red::after { background: #dc2626; }
 
-    <!-- swal -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+		/* Stat cards - Enhanced */
+		.stat-card {
+			position: relative;
+			overflow: hidden;
+		}
+		
+		.stat-card::after {
+			content: '';
+			position: absolute;
+			top: -50%;
+			right: -50%;
+			width: 200%;
+			height: 200%;
+			background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+			opacity: 0;
+			transition: opacity 0.3s ease;
+		}
+		
+		.stat-card:hover::after {
+			opacity: 1;
+		}
+		
+		.stat-card .card-title {
+			font-size: 0.875rem;
+			font-weight: 600;
+			color: #64748b;
+			text-transform: uppercase;
+			letter-spacing: 0.5px;
+			margin-bottom: 12px;
+		}
+		
+		.stat-card h1 {
+			font-size: 2.5rem;
+			font-weight: 800;
+			color: #0f172a;
+			margin: 16px 0;
+			letter-spacing: -1px;
+		}
+		
+		.stat-card .stat {
+			width: 48px;
+			height: 48px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			border-radius: 12px;
+			background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+			transition: all 0.3s ease;
+		}
+		
+		.stat-card:hover .stat {
+			transform: rotate(-10deg) scale(1.1);
+		}
+		
+		.change-badge { 
+			padding: 4px 12px; 
+			border-radius: 20px; 
+			font-size: .75rem; 
+			font-weight: 700;
+			display: inline-flex;
+			align-items: center;
+			gap: 4px;
+		}
+		.change-up { background: #ecfdf5; color: #059669; }
+		.change-down { background: #fef2f2; color: #dc2626; }
+		.change-neutral { background: #f1f5f9; color: #475569; }
 
+		/* Chart container - Enhanced */
+		.chart-sm { 
+			height: 320px; 
+			padding: 16px;
+		}
+		
+		.chart-card {
+			background: linear-gradient(to bottom, #ffffff 0%, #f9fafb 100%);
+		}
+		
+		.chart-card .card-header {
+			background: transparent;
+			border-bottom: 2px solid #f1f5f9;
+			padding: 20px 24px;
+		}
+		
+		.chart-card .card-title {
+			font-size: 1.125rem;
+			font-weight: 700;
+			color: #0f172a;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		/* Recent Orders table */
+		.table thead th { 
+			background: #f1f5f9; 
+			color: #0f172a; 
+			font-weight: 700; 
+			border-bottom: 0;
+			padding: 1rem;
+		}
+		.table tbody tr { 
+			transition: all 0.2s ease;
+		}
+		.table tbody tr:hover { 
+			background: #f8fafc;
+			box-shadow: 0 2px 8px rgba(15,23,42,.04);
+		}
+		.table tbody td {
+			padding: 1rem;
+			vertical-align: middle;
+		}
+		.badge-status { font-weight: 700; }
+		.badge-status.pending { background: #f59e0b; }
+		.badge-status.processing { background: #3b82f6; }
+		.badge-status.shipping { background: #14b8a6; }
+		.badge-status.delivered,.badge-status.received { background: #22c55e; }
+		.badge-status.cancelled { background: #ef4444; }
+
+		/* Low stock alert */
+		.alert-low { 
+			border-radius: 10px; 
+			padding: .8rem 1rem; 
+			background: #fffbeb; 
+			color: #92400e; 
+			border: 1px solid #fde68a;
+			transition: all 0.2s ease;
+			cursor: pointer;
+			text-decoration: none;
+			display: block;
+		}
+		.alert-low:hover { 
+			background: #fef3c7; 
+			border-color: #fbbf24;
+			transform: translateX(4px);
+			box-shadow: 0 2px 8px rgba(251, 191, 36, 0.2);
+		}
+		.alert-low .restock-btn {
+			font-size: 0.75rem;
+			padding: 0.25rem 0.5rem;
+			border-radius: 6px;
+			background: #f59e0b;
+			color: white;
+			border: none;
+			font-weight: 600;
+		}
+		.alert-low .restock-btn:hover {
+			background: #d97706;
+		}
+		.alert-ok { border-radius: 10px; padding: .6rem .8rem; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+		
+		/* Fade in animation for cards */
+		.fade-in-up {
+			animation: fadeInUp 0.6s ease-out forwards;
+			opacity: 0;
+		}
+		
+		@keyframes fadeInUp {
+			from {
+				opacity: 0;
+				transform: translateY(30px);
+			}
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+		
+		.fade-in-up:nth-child(1) { animation-delay: 0.1s; }
+		.fade-in-up:nth-child(2) { animation-delay: 0.2s; }
+		.fade-in-up:nth-child(3) { animation-delay: 0.3s; }
+		.fade-in-up:nth-child(4) { animation-delay: 0.4s; }
+
+		/* Pending Orders: sticky header + optional scroll wrapper */
+		.pending-orders .table-wrap { max-height: 420px; overflow: auto; }
+		.pending-orders .table { margin-bottom: 0; }
+		.pending-orders thead th { position: sticky; top: 0; z-index: 1; background: #f1f5f9; }
+	</style>
 </head>
 
 <body>
-    <?php $active = 'index'; ?>
-    <?php include 'includes/navbar_customer.php'; ?>
+	<div class="wrapper">
+		<?php $active = 'index'; ?>
+		<?php require ('../includes/sidebar_admin.php');?>
 
-    <!-- Hero Section -->
-    <style>
-        :root {
-            --primary: #2563eb;
-            --primary-light: #3b82f6;
-            --primary-dark: #1d4ed8;
-            --accent: #f59e0b;
-            --accent-light: #fbbf24;
-            --light: #eff6ff;
-            --white: #ffffff;
-        }
-        
-        .hero-section {
-            position: relative;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: var(--white);
-            text-align: center;
-            overflow: hidden;
-            padding: 4rem 0;
-        }
-        
-        .hero-content {
-            position: relative;
-            z-index: 20;
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 0 2rem;
-        }
-        
-        .hero-logo {
-            width: 160px;
-            height: 160px;
-            margin: 0 auto 1.5rem;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 4px solid #f59e0b;
-            padding: 3px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 10px 30px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .hero-logo:hover {
-            transform: scale(1.05) translateY(-5px);
-            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.25);
-        }
-        
-        .hero-title {
-            font-size: 5.5rem;
-            font-weight: 800;
-            margin-bottom: 2rem;
-            line-height: 1.1;
-            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            letter-spacing: -1px;
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(90deg, #ffffff, #f0f9ff);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .hero-subtitle {
-            font-size: 1.1rem;
-            max-width: 800px;
-            margin: 0 auto 2.5rem;
-            line-height: 1.5;
-            color: #ffffff;
-            font-weight: 300;
-            letter-spacing: 0.3px;
-            text-shadow: 0 1px 8px rgba(0, 0, 0, 0.3);
-            font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            position: relative;
-            padding: 0 2rem;
-            text-align: center;
-            text-rendering: optimizeLegibility;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        
-        .hero-heading {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #ffffff;
-            margin: 0 0 1rem 0;
-            text-transform: none;
-            letter-spacing: 0;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.2;
-            position: relative;
-            padding: 0;
-            white-space: nowrap;
-        }
-        
-        .hero-subtitle::before,
-        .hero-subtitle::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            height: 2px;
-            width: 50px;
-            background: linear-gradient(90deg, rgba(255,255,255,0.5), transparent);
-        }
-        
-        .hero-subtitle::before {
-            left: 0;
-        }
-        
-        .hero-subtitle::after {
-            right: 0;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5));
-        }
-        
-        
-        .hero-buttons {
-            display: flex;
-            gap: 1.25rem;
-            justify-content: center;
-            margin-top: 2.5rem;
-            flex-wrap: wrap;
-        }
-        
-        .btn {
-            padding: 1rem 2.5rem;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 1rem;
-            letter-spacing: 0.5px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-            z-index: 1;
-            border: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(45deg, var(--primary) 0%, var(--primary-light) 50%, #f59e0b 100%);
-            background-size: 200% auto;
-            color: white;
-            border: none;
-            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
-            position: relative;
-            overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .btn-primary::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(45deg, #3b82f6 0%, #60a5fa 50%, #f59e0b 100%);
-            background-size: 200% auto;
-            z-index: -1;
-            opacity: 0;
-            transition: opacity 0.4s ease;
-        }
-        
-        .btn-primary:hover {
-            transform: translateY(-3px) scale(1.02);
-            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.5);
-            background-position: right center;
-        }
-        
-        .btn-primary:active {
-            transform: translateY(0) scale(0.98);
-        }
-        
-        .btn-outline {
-            background: transparent;
-            border: 2px solid var(--white);
-            color: var(--white);
-            position: relative;
-            overflow: hidden;
-            z-index: 1;
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        .btn-outline::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 0;
-            height: 100%;
-            background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.2));
-            transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: -1;
-        }
-        
-        .btn-outline:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-            transform: translateY(-3px);
-            box-shadow: 0 5px 20px rgba(59, 130, 246, 0.3);
-        }
-        
-        .btn-outline:hover::before {
-            width: 100%;
-        }
-        
-        .btn-outline:active {
-            transform: translateY(0);
-        }
-        
-        .btn i {
-            margin-right: 8px;
-            font-size: 1.1em;
-        }
-        
-        .scroll-down {
-            position: absolute;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: var(--white);
-            text-decoration: none;
-            font-size: 0.9rem;
-            opacity: 0.8;
-            transition: all 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .scroll-down:hover {
-            opacity: 1;
-            transform: translateX(-50%) translateY(3px);
-        }
-        
-        .scroll-down i {
-            font-size: 1.5rem;
-            animation: bounce 2s infinite;
-        }
-        
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-8px); }
-            60% { transform: translateY(-4px); }
-        }
-        
-        /* Animated Floating Elements */
-        .floating-elements {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            z-index: 1;
-        }
-        
-        .floating-element {
-            position: absolute;
-            border-radius: 50%;
-            background: rgba(59, 130, 246, 0.6);
-            box-shadow: 0 0 25px 8px rgba(29, 78, 216, 0.4);
-            animation: float var(--duration, 20s) ease-in-out infinite, pulse 3s ease-in-out infinite alternate;
-            animation-delay: var(--delay, 0s);
-            width: var(--size, 30px);
-            height: var(--size, 30px);
-            left: var(--x, 50%);
-            top: var(--y, 50%);
-            z-index: 1;
-            will-change: transform, opacity;
-            transform: translateZ(0);
-        }
-        
-        .yellow-float {
-            background: rgba(245, 158, 11, 0.7);
-            box-shadow: 0 0 30px 10px rgba(245, 158, 11, 0.5);
-            animation: float var(--duration, 20s) ease-in-out infinite, pulse 4s ease-in-out infinite alternate-reverse;
-        }
-        
-        .accent-float {
-            background: linear-gradient(45deg, rgba(29, 78, 216, 0.3), rgba(245, 158, 11, 0.3));
-            box-shadow: 0 0 80px 40px rgba(29, 78, 216, 0.25);
-            filter: blur(25px);
-            animation: float var(--duration, 25s) ease-in-out infinite, glow 8s ease-in-out infinite alternate;
-        }
-        
-        @keyframes float {
-            0%, 100% {
-                transform: translate(0, 0) rotate(0deg) scale(1);
-                opacity: 0.8;
-            }
-            25% {
-                transform: translate(30px, 30px) rotate(8deg) scale(1.1);
-                opacity: 0.9;
-            }
-            50% {
-                transform: translate(0, 60px) rotate(0deg) scale(0.9);
-                opacity: 0.7;
-            }
-            75% {
-                transform: translate(-30px, 30px) rotate(-8deg) scale(1.05);
-                opacity: 0.85;
-            }
-        }
-        
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-                opacity: 0.7;
-            }
-            50% {
-                transform: scale(1.1);
-                opacity: 0.9;
-            }
-            100% {
-                transform: scale(1);
-                opacity: 0.7;
-            }
-        }
-        
-        /* Decorative Elements */
-        .hero-blur {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(60px);
-            opacity: 0.15;
-            z-index: 1;
-            animation: pulse 8s ease-in-out infinite alternate;
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.1; }
-            100% { transform: scale(1.1); opacity: 0.2; }
-        }
-        
-        .blur-1 {
-            width: 400px;
-            height: 400px;
-            background: var(--accent);
-            top: -100px;
-            right: -100px;
-            animation: float-accent 15s ease-in-out infinite alternate;
-        }
-        
-        @keyframes float-accent {
-            0% {
-                transform: translate(0, 0);
-            }
-            100% {
-                transform: translate(-50px, 50px);
-            }
-        }
-        
-        .blur-2 {
-            width: 500px;
-            height: 500px;
-            background: var(--light);
-            bottom: -200px;
-            left: -200px;
-        }
+		<div class="main">
+			<?php require ('../includes/navbar_admin.php');?>
 
-        /* Responsive adjustments */
-        @media (max-width: 992px) {
-            .hero-title {
-                font-size: 3rem;
-            }
-            
-            .hero-subtitle {
-                font-size: 1.25rem;
-            }
-            
-            .hero-logo {
-                width: 140px;
-                height: 140px;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .hero-section {
-                min-height: 90vh;
-                padding: 5rem 1rem;
-            }
-            
-            .hero-title {
-                font-size: 2.5rem;
-            }
-            
-            .hero-subtitle {
-                font-size: 1.1rem;
-                margin: 1rem auto 2rem;
-            }
-            
-            .hero-buttons {
-                flex-direction: column;
-                align-items: center;
-                gap: 1rem;
-            }
-            
-            .btn {
-                width: 100%;
-                max-width: 280px;
-                padding: 0.9rem 2rem;
-            }
-            
-            .hero-logo {
-                width: 120px;
-                height: 120px;
-            }
-        }
-    </style>
-    <section class="hero-section">
-        <!-- Background Pattern -->
-        <div class="bg-pattern"></div>
-        
-        <!-- Geometric Shapes -->
-        <div class="geometric-shapes">
-            <div class="shape shape-1"></div>
-            <div class="shape shape-2"></div>
-            <div class="shape shape-3"></div>
-            <div class="shape shape-4"></div>
-            <div class="blue-accent accent-1"></div>
-            <div class="blue-accent accent-2"></div>
-            <div class="accent-3"></div>
-            
-            <!-- Floating Dots Background -->
-            <div class="floating-dots" id="floatingDots">
-                <!-- Dots will be added by JavaScript -->
-            </div>
-        </div>
-        
-        <!-- Decorative Blur Effects -->
-        <div class="hero-blur blur-1"></div>
-        <div class="hero-blur blur-2"></div>
-        
-        <!-- Animated Floating Elements -->
-        <div class="floating-elements">
-            <div class="floating-element" style="--i:1; --size: 40px; --x: 10%; --y: 20%; --duration: 15s; --delay: 0s;"></div>
-            <div class="floating-element yellow-float" style="--i:2; --size: 25px; --x: 85%; --y: 30%; --duration: 18s; --delay: -2s;"></div>
-            <div class="floating-element" style="--i:3; --size: 30px; --x: 30%; --y: 70%; --duration: 25s; --delay: -10s;"></div>
-            <div class="floating-element yellow-float" style="--i:4; --size: 35px; --x: 70%; --y: 60%; --duration: 20s; --delay: -8s;"></div>
-            <div class="floating-element" style="--i:5; --size: 25px; --x: 20%; --y: 50%; --duration: 22s; --delay: -3s;"></div>
-            <div class="floating-element yellow-float" style="--size: 20px; --x: 90%; --y: 80%; --duration: 25s; --delay: -12s;"></div>
-            <div class="floating-element yellow-float" style="--size: 30px; --x: 15%; --y: 25%; --duration: 22s; --delay: -5s;"></div>
-            <div class="floating-element accent-float" style="--size: 120px; --x: 80%; --y: 70%; --duration: 25s; --delay: -5s;"></div>
-        </div>
-        
-        <div class="hero-content">
-            <img src="assets/img/logo_forsapin.jpg" alt="SAPIN" class="hero-logo">
-            <h1 class="display-4 fw-bold mb-4" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.2); text-align: center; font-size: 3.5rem; text-transform: none;">Experience Luxurious Comfort</h1>
-            <p class="hero-subtitle">
-                Premium quality products designed to elevate your home with comfort and style
-            </p>
-            <div class="hero-buttons">
-                <a href="shop.php" class="btn btn-primary">
-                    <i class="bi bi-cart3"></i> Shop Now
-                </a>
-                <a href="#featured" class="btn btn-outline">
-                    <i class="bi bi-grid"></i> View Collections
-                </a>
-            </div>
-        </div>
-        
-        <a href="#features" class="scroll-down">
-            <span>Scroll to Explore</span>
-            <i class="bi bi-arrow-down"></i>
-        </a>
-    </section>
-    
-    <style>
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-            40% { transform: translateY(-8px); }
-            60% { transform: translateY(-4px); }
-        }
-        
-        /* Smooth scroll behavior */
-        html {
-            scroll-behavior: smooth;
-        }
-    </style>
+			<main class="content">
+				<div class="container-fluid p-0">
 
-    <!-- Features Section -->
-    <section class="py-5">
-        <div class="container">
-            <div class="text-center mb-5 scroll-reveal">
-                <h2 class="display-5 fw-bold mb-3">Why Choose SAPIN?</h2>
-                <div style="width: 80px; height: 4px; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); margin: 0 auto; border-radius: 2px;"></div>
-            </div>
-            <div class="row g-4">
-                <div class="col-md-3">
-                    <div class="feature-card">
-                        <i class="bi bi-shield-check feature-icon text-primary"></i>
-                        <h4>Premium Quality</h4>
-                        <p>Made with the finest materials for ultimate comfort</p>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="feature-card">
-                        <i class="bi bi-wind feature-icon text-primary"></i>
-                        <h4>Breathable</h4>
-                        <p>Stay cool and comfortable all night long</p>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="feature-card">
-                        <i class="bi bi-heart feature-icon text-primary"></i>
-                        <h4>Hypoallergenic</h4>
-                        <p>Safe for sensitive skin and allergies</p>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="feature-card">
-                        <i class="bi bi-stars feature-icon text-primary"></i>
-                        <h4>Long-Lasting</h4>
-                        <p>Durable materials that maintain quality</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-    
-    <?php 
-        $stmt = $pdo->prepare("SELECT 
-            p.*, 
-            c.category_name,
-            AVG(r.rating) AS avg_rating,
-            COUNT(r.rating_id) AS rating_count,
-            vs.sizes_pairs,
-            vs.from_price,
-            vs.total_variant_stock,
-            vs.has_variants
-        FROM 
-            products p
-        JOIN 
-            product_category c ON p.category_id = c.category_id
-        INNER JOIN 
-            item_ratings r ON p.product_id = r.product_id
-        LEFT JOIN (
-            SELECT product_id,
-                   MIN(CASE WHEN is_active = 1 AND stock > 0 THEN price END) AS from_price,
-                   GROUP_CONCAT(CASE WHEN is_active = 1 AND stock > 0 THEN CONCAT(size,'::',stock) END SEPARATOR '||') AS sizes_pairs,
-                   SUM(CASE WHEN is_active = 1 THEN stock ELSE 0 END) AS total_variant_stock,
-                   COUNT(*) AS has_variants
-            FROM product_variants
-            GROUP BY product_id
-        ) vs ON vs.product_id = p.product_id
-        GROUP BY 
-            p.product_id
-        HAVING 
-            rating_count > 0
-        ORDER BY 
-            avg_rating DESC, rating_count DESC
-        LIMIT 4;");
-        $stmt->execute();
-        $featured = $stmt->fetchAll();
-    ?>
-    <!-- Featured Products -->
-    <section id="featured" class="py-5" style="background: linear-gradient(135deg, #f8fafc 0%, #e5e7eb 100%);">
-        <div class="container">
-            <div class="text-center mb-5" style="animation: fadeInUp 0.8s ease-out;">
-                <h2 class="display-4 fw-bold mb-3">Featured Collections</h2>
-                <div style="width: 100px; height: 4px; background: linear-gradient(90deg, var(--primary-color), var(--secondary-color)); margin: 0 auto; border-radius: 2px;"></div>
-                <p class="text-muted mt-3">Handpicked products with the best ratings</p>
-            </div>
-            <div class="row g-4">
-                <?php
-                    function renderStars($rating) {
-                        $fullStars = floor($rating);
-                        $halfStar = ($rating - $fullStars >= 0.25 && $rating - $fullStars <= 0.75);
-                        $result = '';
+					<!-- Enhanced Page Header -->
+					<div class="page-header">
+						<div class="d-flex justify-content-between align-items-center">
+							<div>
+								<h1><i class="bi bi-speedometer2 me-3"></i>Analytics Dashboard</h1>
+								<p class="mb-0">
+									<i class="bi bi-calendar3 me-2"></i><?= date('l, F j, Y') ?> 
+									<span class="mx-2">•</span>
+									<i class="bi bi-clock me-2"></i><?= date('g:i A') ?>
+								</p>
+							</div>
+							<div class="text-end">
+								<div class="badge bg-white bg-opacity-25 text-white px-3 py-2" style="font-size: 0.9rem;">
+									<i class="bi bi-person-circle me-2"></i>
+									Welcome, <?= htmlspecialchars($user_role) ?>
+								</div>
+							</div>
+						</div>
+					</div>
 
-                        for ($i = 1; $i <= 5; $i++) {
-                            if ($i <= $fullStars) {
-                                $result .= '<i class="bi bi-star-fill"></i>';
-                            } elseif ($halfStar && $i == $fullStars + 1) {
-                                $result .= '<i class="bi bi-star-half"></i>';
-                            } else {
-                                $result .= '<i class="bi bi-star"></i>';
-                            }
-                        }
+					<?php if (isset($_SESSION['usertype_id']) && $_SESSION['usertype_id'] == 5): ?>
+					<?php
+						// Financial metrics for Super Admin only
+						$current_month_start = date('Y-m-01');
+						$current_month_end = date('Y-m-t');
+						
+						// Get this month's revenue (POS + Online Orders)
+						$revenue_stmt = $pdo->prepare("
+							SELECT COALESCE(SUM(total_amount), 0) as revenue
+							FROM pos_sales
+							WHERE DATE(sale_date) BETWEEN :from AND :to
+							AND status = 'completed'
+						");
+						$revenue_stmt->execute([':from' => $current_month_start, ':to' => $current_month_end]);
+						$pos_revenue = $revenue_stmt->fetchColumn();
+						
+						$orders_revenue_stmt = $pdo->prepare("
+							SELECT COALESCE(SUM(amount), 0) as revenue
+							FROM orders
+							WHERE DATE(date) BETWEEN :from AND :to
+							AND status IN ('Delivered', 'Received')
+						");
+						$orders_revenue_stmt->execute([':from' => $current_month_start, ':to' => $current_month_end]);
+						$online_revenue = $orders_revenue_stmt->fetchColumn();
+						
+						$total_revenue = $pos_revenue + $online_revenue;
+						
+						// Get this month's expenses
+						$expenses_stmt = $pdo->prepare("
+							SELECT COALESCE(SUM(amount), 0) as total
+							FROM expenses
+							WHERE expense_date BETWEEN :from AND :to
+						");
+						$expenses_stmt->execute([':from' => $current_month_start, ':to' => $current_month_end]);
+						$total_expenses = $expenses_stmt->fetchColumn();
+						
+						// Calculate profit
+						$net_profit = $total_revenue - $total_expenses;
+						$profit_margin = $total_revenue > 0 ? ($net_profit / $total_revenue) * 100 : 0;
+					?>
+					<!-- Financial Overview Section (Super Admin Only) -->
+					<div class="row mb-3">
+						<div class="col-12">
+							<div class="alert financial-header">
+								<div class="d-flex align-items-center justify-content-between">
+									<div>
+										<h4 class="mb-1"><i class="bi bi-graph-up-arrow me-2"></i>Financial Overview</h4>
+										<p class="mb-0 opacity-75"><?= date('F Y') ?> Performance Metrics</p>
+									</div>
+									<div>
+										<i class="bi bi-currency-exchange" style="font-size: 2.5rem; opacity: 0.3;"></i>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+					<div class="row mb-4">
+						<div class="col-xl-3 col-md-6 mb-3 fade-in-up">
+							<a href="profitloss.php" style="text-decoration: none;">
+								<div class="card financial-card" style="border-left: 4px solid #10b981;">
+									<div class="card-body">
+										<div class="d-flex justify-content-between align-items-start">
+											<div class="flex-grow-1">
+												<p class="metric-label text-muted">TOTAL REVENUE</p>
+												<h3 class="text-success">₱<?= number_format($total_revenue, 2) ?></h3>
+												<small class="metric-subtitle text-muted">
+													<i class="bi bi-shop me-1"></i>POS + Online Orders
+												</small>
+											</div>
+											<div class="icon-circle icon-green">
+												<i class="bi bi-cash-stack" style="font-size: 1.75rem;"></i>
+											</div>
+										</div>
+									</div>
+								</div>
+							</a>
+						</div>
+						<div class="col-xl-3 col-md-6 mb-3 fade-in-up">
+							<a href="expenses.php" style="text-decoration: none;">
+								<div class="card financial-card" style="border-left: 4px solid #ef4444;">
+									<div class="card-body">
+										<div class="d-flex justify-content-between align-items-start">
+											<div class="flex-grow-1">
+												<p class="metric-label text-muted">TOTAL EXPENSES</p>
+												<h3 class="text-danger">₱<?= number_format($total_expenses, 2) ?></h3>
+												<small class="metric-subtitle text-muted">
+													<i class="bi bi-receipt me-1"></i>All Categories
+												</small>
+											</div>
+											<div class="icon-circle icon-red">
+												<i class="bi bi-wallet2" style="font-size: 1.75rem;"></i>
+											</div>
+										</div>
+									</div>
+								</div>
+							</a>
+						</div>
+						<div class="col-xl-3 col-md-6 mb-3 fade-in-up">
+							<a href="profitloss.php" style="text-decoration: none;">
+								<div class="card financial-card" style="border-left: 4px solid #3b82f6;">
+									<div class="card-body">
+										<div class="d-flex justify-content-between align-items-start">
+											<div class="flex-grow-1">
+												<p class="metric-label text-muted">NET PROFIT</p>
+												<h3 class="<?= $net_profit >= 0 ? 'text-primary' : 'text-danger' ?>">
+													₱<?= number_format($net_profit, 2) ?>
+												</h3>
+												<small class="metric-subtitle text-muted">
+													<i class="bi bi-calculator me-1"></i>Revenue - Expenses
+												</small>
+											</div>
+											<div class="icon-circle icon-blue">
+												<i class="bi bi-graph-up" style="font-size: 1.75rem;"></i>
+											</div>
+										</div>
+									</div>
+								</div>
+							</a>
+						</div>
+						<div class="col-xl-3 col-md-6 mb-3 fade-in-up">
+							<a href="profitloss.php" style="text-decoration: none;">
+								<div class="card financial-card" style="border-left: 4px solid #f59e0b;">
+									<div class="card-body">
+										<div class="d-flex justify-content-between align-items-start">
+											<div class="flex-grow-1">
+												<p class="metric-label text-muted">PROFIT MARGIN</p>
+												<h3 class="text-warning"><?= number_format($profit_margin, 1) ?>%</h3>
+												<small class="metric-subtitle text-muted">
+													<i class="bi bi-pie-chart me-1"></i>Profitability Rate
+												</small>
+											</div>
+											<div class="icon-circle icon-yellow">
+												<i class="bi bi-percent" style="font-size: 1.75rem;"></i>
+											</div>
+										</div>
+									</div>
+								</div>
+							</a>
+						</div>
+					</div>
+					<?php endif; ?>
 
-                        return $result;
-                    }
-                ?>
-                <?php foreach ($featured as $product): ?>
-                    <div class="col-md-3">
-                        <div class="card product-card h-100">
-                            <div class="position-relative">
-                                <img src="uploads/products/<?php echo htmlspecialchars($product['image_url']); ?>"
-                                    class="card-img-top"
-                                    alt="<?php echo htmlspecialchars($product['product_name']); ?>"
-                                    style="height: 220px; object-fit: cover;">
-                                <div class="position-absolute top-0 end-0 m-2">
-                                    <span class="badge" style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 0.5rem 0.75rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600;">
-                                        <i class="bi bi-star-fill me-1"></i>Featured
-                                    </span>
+					<div class="row">
+						<div class="col-xl-6 col-xxl-5 d-flex">
+							<div class="w-100">
+								<div class="row">
+									<div class="col-sm-6 mb-3">
+										<?php 
+											$stmt = $pdo->prepare("SELECT COUNT(*) FROM materials");
+											$stmt->execute();
+											$material_count = $stmt->fetchColumn();
+										?>
+										<a href="materialinventory.php" style="text-decoration: none;">
+											<div class="card stat-card">
+												<div class="card-body">
+													<div class="d-flex justify-content-between align-items-start">
+														<div>
+															<h5 class="card-title"><i class="bi bi-box-seam me-2"></i>Materials</h5>
+														</div>
+														<div class="stat text-primary">
+															<i class="align-middle" data-feather="package"></i>
+														</div>
+													</div>
+													<h1><?php echo $material_count; ?></h1>
+													<div class="d-flex align-items-center gap-2">
+														<span class="badge bg-primary bg-opacity-10 text-primary">
+															<i class="bi bi-arrow-right me-1"></i>View Inventory
+														</span>
+													</div>
+												</div>
+											</div>
+										</a>
+										<?php 
+											// Today's date
+											$today = date('Y-m-d');
+
+											// Date 7 days ago
+											$last_week = date('Y-m-d', strtotime('-7 days'));
+
+											// Get today's visitors
+											$stmt = $pdo->prepare("SELECT COUNT(*) FROM visitors WHERE DATE(visit_time) = :date");
+											$stmt->execute([':date' => $today]);
+											$visitor_today = $stmt->fetchColumn() ?? 0;
+
+											// Get visitors last week
+											$stmt = $pdo->prepare("SELECT COUNT(*) FROM visitors WHERE DATE(visit_time) = :last_week_date");
+											$stmt->execute([':last_week_date' => $last_week]);
+											$visitor_last_week = $stmt->fetchColumn() ?? 0;
+
+											// Calculate % difference
+											if ($visitor_last_week > 0) {
+												$change = (($visitor_today - $visitor_last_week) / $visitor_last_week) * 100;
+											} else {
+												$change = 0; // Avoid division by zero
+											}
+
+											// Format and classify change
+											$change_formatted = number_format(abs($change), 2);
+
+											if ($change > 0) {
+												$change_icon = 'mdi-arrow-top-right';
+												$change_color = 'text-success';
+											} elseif ($change < 0) {
+												$change_icon = 'mdi-arrow-bottom-right';
+												$change_color = 'text-danger';
+											} else {
+												$change_icon = 'mdi-arrow-right';
+												$change_color = 'text-secondary';
+											}
+										?>
+										<a href="reports.php" style="text-decoration: none;">
+											<div class="card stat-card">
+												<div class="card-body">
+													<div class="d-flex justify-content-between align-items-start">
+														<div>
+															<h5 class="card-title"><i class="bi bi-people me-2"></i>Visitors Today</h5>
+														</div>
+														<div class="stat text-primary">
+															<i class="align-middle" data-feather="users"></i>
+														</div>
+													</div>
+													<h1><?php echo $visitor_today; ?></h1>
+													<div class="d-flex align-items-center gap-2">
+														<span class="change-badge <?php echo $change > 0 ? 'change-up' : ($change < 0 ? 'change-down' : 'change-neutral'); ?>">
+															<i class="bi bi-<?php echo $change > 0 ? 'arrow-up' : ($change < 0 ? 'arrow-down' : 'dash'); ?>"></i>
+															<?php echo $change_formatted; ?>%
+														</span>
+														<span class="text-muted small">vs last week</span>
+													</div>
+												</div>
+											</div>
+										</a>
+									</div>
+									<div class="col-sm-6 mb-3">
+										<?php 
+											// Dates
+											$today = date('Y-m-d');
+											$last_week = date('Y-m-d', strtotime('-7 days'));
+											$start = $today . ' 00:00:00';
+											$end = $today . ' 23:59:59';
+
+											
+											$stmt = $pdo->prepare("SELECT SUM(amount) FROM orders WHERE (status = 'Delivered' OR status = 'Received') AND date BETWEEN :start AND :end");
+											$stmt->execute([':start' => $start, ':end' => $end]);
+											$sales_today = $stmt->fetchColumn() ?? 0;
+
+											// Sales same day last week
+											$stmt = $pdo->prepare("SELECT SUM(amount) FROM orders WHERE (status = 'Delivered' OR status = 'Received') AND DATE(date) = :last_week");
+											$stmt->execute([':last_week' => $last_week]);
+											$sales_last_week = $stmt->fetchColumn() ?? 0;
+
+											// Calculate % change
+											if ($sales_last_week > 0) {
+												$sales_change = (($sales_today - $sales_last_week) / $sales_last_week) * 100;
+											} else {
+												$sales_change = 0;
+											}
+
+											// Format
+											$sales_change_formatted = number_format(abs($sales_change), 2);
+										?>
+										<a href="orders.php" style="text-decoration: none;">
+											<div class="card stat-card">
+												<div class="card-body">
+													<div class="d-flex justify-content-between align-items-start">
+														<div>
+															<h5 class="card-title"><i class="bi bi-currency-exchange me-2"></i>Sales Today</h5>
+														</div>
+														<div class="stat text-primary">
+															<i class="align-middle" data-feather="shopping-bag"></i>
+														</div>
+													</div>
+													<h1>₱<?php echo number_format($sales_today, 2); ?></h1>
+													<div class="d-flex align-items-center gap-2">
+														<span class="change-badge <?php echo $sales_change > 0 ? 'change-up' : ($sales_change < 0 ? 'change-down' : 'change-neutral'); ?>">
+															<i class="bi bi-<?php echo $sales_change > 0 ? 'arrow-up' : ($sales_change < 0 ? 'arrow-down' : 'dash'); ?>"></i>
+															<?php echo $sales_change_formatted; ?>%
+														</span>
+														<span class="text-muted small">vs last week</span>
+													</div>
+												</div>
+											</div>
+										</a>
+										<?php 
+											// Today's date
+											$today = date('Y-m-d');
+
+											// Date 7 days ago
+											$last_week = date('Y-m-d', strtotime('-7 days'));
+
+											// Get today's orders
+											$stmt = $pdo->prepare("SELECT COUNT(*) FROM orders WHERE DATE(date) = :date");
+											$stmt->execute([':date' => $today]);
+											$orders_today = $stmt->fetchColumn() ?? 0;
+
+											// Get last week's orders
+											$stmt = $pdo->prepare("SELECT COUNT(*) FROM orders WHERE DATE(date) = :last_week_date");
+											$stmt->execute([':last_week_date' => $last_week]);
+											$orders_last_week = $stmt->fetchColumn() ?? 0;
+
+											// Calculate % difference
+											if ($orders_last_week > 0) {
+												$change = (($orders_today - $orders_last_week) / $orders_last_week) * 100;
+											} else {
+												$change = 0; // Avoid division by zero
+											}
+
+											// Format and classify change
+											$change_formatted = number_format(abs($change), 2);
+
+											if ($change > 0) {
+												$change_icon = 'mdi-arrow-top-right';
+												$change_color = 'text-success';
+											} elseif ($change < 0) {
+												$change_icon = 'mdi-arrow-bottom-right';
+												$change_color = 'text-danger';
+											} else {
+												$change_icon = 'mdi-arrow-right';
+												$change_color = 'text-secondary';
+											}
+										?>
+										<a href="orders.php" style="text-decoration: none;">
+											<div class="card stat-card">
+												<div class="card-body">
+													<div class="d-flex justify-content-between align-items-start">
+														<div>
+															<h5 class="card-title"><i class="bi bi-cart-check me-2"></i>Orders Today</h5>
+														</div>
+														<div class="stat text-primary">
+															<i class="align-middle" data-feather="shopping-cart"></i>
+														</div>
+													</div>
+													<h1><?php echo $orders_today; ?></h1>
+													<div class="d-flex align-items-center gap-2">
+														<span class="change-badge <?php echo $change > 0 ? 'change-up' : ($change < 0 ? 'change-down' : 'change-neutral'); ?>">
+															<i class="bi bi-<?php echo $change > 0 ? 'arrow-up' : ($change < 0 ? 'arrow-down' : 'dash'); ?>"></i>
+															<?php echo $change_formatted; ?>%
+														</span>
+														<span class="text-muted small">vs last week</span>
+													</div>
+												</div>
+											</div>
+										</a>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div class="col-xl-6 col-xxl-7">
+							<div class="card chart-card flex-fill w-100">
+								<div class="card-header">
+									<h5 class="card-title mb-0">
+										<i class="bi bi-graph-up me-2"></i>Monthly Sales Performance
+									</h5>
+									<p class="text-muted small mb-0 mt-1">Revenue trends for the current year</p>
+								</div>
+								<div class="card-body py-3">
+									<div class="chart chart-sm">
+										<canvas id="chartjs-dashboard-line"></canvas>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="row">
+						<?php 
+						$per_page = 3;
+						$page = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
+						$offset = ($page - 1) * $per_page;
+
+						$stmt = $pdo->prepare("SELECT order_id, fullname, date, amount, status FROM orders WHERE status = 'Pending' ORDER BY date DESC LIMIT :limit OFFSET :offset");
+						$stmt->bindValue(':limit', $per_page, PDO::PARAM_INT);
+						$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+						$stmt->execute();
+						$pending_orders = $stmt->fetchAll();
+
+						$stmt = $pdo->prepare("SELECT COUNT(order_id) FROM orders WHERE status = 'Pending'");
+						$stmt->execute();
+						$pending_count = $stmt->fetchColumn();
+						$total_pages = max(1, (int)ceil(($pending_count ?? 0) / $per_page));
+					?>
+						<div class="col-12 col-lg-8 col-xxl-9 d-flex">
+							<div class="card flex-fill pending-orders" id="pending-orders">
+								<div class="card-header sticky-top">
+									<div class="d-flex justify-content-between align-items-center">
+										<div>
+											<h5 class="card-title mb-0">
+												<i class="bi bi-clock-history me-2"></i>Pending Orders
+											</h5>
+											<p class="text-muted small mb-0 mt-1">Orders awaiting processing</p>
+										</div>
+										<span class="badge bg-warning text-dark" style="font-size: 1rem; padding: 8px 16px;">
+											<?php echo $pending_count ?? 0; ?> Pending
+										</span>
+									</div>
+								</div>
+								<div class="table-wrap">
+							<table class="table table-hover my-0">
+									<thead>
+										<tr>
+											<th>ID</th>
+											<th>Full Name</th>
+											<th class="d-none d-xl-table-cell">Date</th>
+											<th class="d-none d-xl-table-cell">Status</th>
+											<th>Amount</th>
+											<th class="d-none d-md-table-cell">Action</th>
+										</tr>
+									</thead>
+									<tbody>
+										<?php if (empty($pending_orders)): ?>
+											<tr>
+												<td colspan="6" class="text-center py-4">
+													<i class="bi bi-inbox" style="font-size: 2rem; color: #94a3b8;"></i>
+													<p class="text-muted mb-0 mt-2">No pending orders</p>
+												</td>
+											</tr>
+										<?php else: ?>
+											<?php foreach($pending_orders as $row): ?>
+												<tr style="cursor: pointer;" onclick="window.location.href='view_order.php?order_id=<?php echo $row['order_id']; ?>'">
+													<td>
+														<strong class="text-primary">#<?php echo $row['order_id'] ?></strong>
+													</td>
+													<td>
+														<div class="d-flex align-items-center">
+															<i class="bi bi-person-circle me-2 text-muted"></i>
+															<strong><?php echo htmlspecialchars($row['fullname']) ?></strong>
+														</div>
+													</td>
+													<td class="d-none d-xl-table-cell">
+														<small class="text-muted">
+															<i class="bi bi-calendar3 me-1"></i><?php echo date("M j, Y", strtotime($row['date'])); ?>
+															<br>
+															<i class="bi bi-clock me-1"></i><?php echo date("g:i A", strtotime($row['date'])); ?>
+														</small>
+													</td>
+													<td class="d-none d-xl-table-cell">
+														<span class="badge bg-warning text-dark" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">
+															<i class="bi bi-clock-history me-1"></i>Pending
+														</span>
+													</td>
+													<td>
+														<strong class="text-success" style="font-size: 1.05rem;">₱<?php echo number_format($row['amount'], 2); ?></strong>
+													</td>
+													<td class="d-none d-md-table-cell">
+														<a href="view_order.php?order_id=<?php echo $row['order_id']; ?>" class="btn btn-sm btn-primary" onclick="event.stopPropagation();">
+															<i class="bi bi-eye me-1"></i>View
+														</a>
+													</td>
+												</tr>
+											<?php endforeach; ?>
+										<?php endif; ?>
+									</tbody>
+								</table>
+								</div>
+								<div class="card-footer d-flex justify-content-between align-items-center">
+									<?php $prev = max(1, $page - 1); $next = min($total_pages, $page + 1); ?>
+									<a class="btn btn-sm btn-outline-secondary <?php echo $page <= 1 ? 'disabled' : ''; ?>" href="index.php?p=<?php echo $prev; ?>#pending-orders">Prev</a>
+									<div class="small text-muted">Page <?php echo $page; ?> of <?php echo $total_pages; ?></div>
+									<a class="btn btn-sm btn-outline-primary <?php echo $page >= $total_pages ? 'disabled' : ''; ?>" href="index.php?p=<?php echo $next; ?>#pending-orders">Next</a>
+								</div>
+							</div>
+						</div>
+						<div class="col-12 col-lg-4 col-xxl-3 d-flex">
+                            <?php 
+                                // Pagination for Low Stock accordion
+                                $lp_per_page = 5; // products per page
+                                $lm_per_page = 5; // materials per page
+                                $lp_page = isset($_GET['lp']) ? max(1, (int)$_GET['lp']) : 1;
+                                $lm_page = isset($_GET['lm']) ? max(1, (int)$_GET['lm']) : 1;
+                                $lp_offset = ($lp_page - 1) * $lp_per_page;
+                                $lm_offset = ($lm_page - 1) * $lm_per_page;
+
+                                // Totals
+                                $stmt = $pdo->prepare("SELECT COUNT(m.material_id) FROM materials m WHERE m.stock <= m.reorder_point");
+                                $stmt->execute();
+                                $low_stock_materials_total = (int)$stmt->fetchColumn();
+
+                                // Count products with low stock (including variants)
+                                $stmt = $pdo->prepare("
+                                    SELECT COUNT(DISTINCT p.product_id) 
+                                    FROM products p
+                                    LEFT JOIN (
+                                        SELECT 
+                                            product_id, 
+                                            SUM(CASE WHEN is_active = 1 THEN stock ELSE 0 END) AS total_stock
+                                        FROM product_variants
+                                        GROUP BY product_id
+                                    ) vs ON vs.product_id = p.product_id
+                                    WHERE COALESCE(vs.total_stock, p.stock) <= p.restock_alert
+                                    AND COALESCE(vs.total_stock, p.stock) > 0
+                                ");
+                                $stmt->execute();
+                                $low_stock_products_total = (int)$stmt->fetchColumn();
+
+                                $lm_total_pages = max(1, (int)ceil($low_stock_materials_total / $lm_per_page));
+                                $lp_total_pages = max(1, (int)ceil($low_stock_products_total / $lp_per_page));
+
+                                // Paginated lists
+                                $stmt = $pdo->prepare("\n                                    SELECT m.material_id, m.material_name, m.stock, m.reorder_point, mu.materialunit_name\n                                    FROM materials m\n                                    JOIN materialunits mu ON m.materialunit_id = mu.materialunit_id\n                                    WHERE m.stock <= m.reorder_point\n                                    ORDER BY m.stock ASC\n                                    LIMIT :limit OFFSET :offset\n                                ");
+                                $stmt->bindValue(':limit', $lm_per_page, PDO::PARAM_INT);
+                                $stmt->bindValue(':offset', $lm_offset, PDO::PARAM_INT);
+                                $stmt->execute();
+                                $low_stock_materials = $stmt->fetchAll();
+
+                                $stmt = $pdo->prepare("\n                                    SELECT \n                                        p.product_id, \n                                        p.product_name, \n                                        p.price, \n                                        p.bundle_price, \n                                        p.description, \n                                        COALESCE(vs.total_stock, p.stock) AS stock, \n                                        p.category_id, \n                                        p.pieces_per_bundle, \n                                        p.material, \n                                        p.size, \n                                        p.restock_alert, \n                                        p.image_url\n                                    FROM products p\n                                    LEFT JOIN (\n                                        SELECT \n                                            product_id, \n                                            SUM(CASE WHEN is_active = 1 THEN stock ELSE 0 END) AS total_stock\n                                        FROM product_variants\n                                        GROUP BY product_id\n                                    ) vs ON vs.product_id = p.product_id\n                                    WHERE COALESCE(vs.total_stock, p.stock) <= p.restock_alert\n                                    AND COALESCE(vs.total_stock, p.stock) > 0\n                                    ORDER BY COALESCE(vs.total_stock, p.stock) ASC\n                                    LIMIT :limit OFFSET :offset\n                                ");
+                                $stmt->bindValue(':limit', $lp_per_page, PDO::PARAM_INT);
+                                $stmt->bindValue(':offset', $lp_offset, PDO::PARAM_INT);
+                                $stmt->execute();
+                                $low_stock_products = $stmt->fetchAll();
+
+                                // Which accordion is open (default: none)
+                                $products_open = isset($_GET['lp']);
+                                $materials_open = isset($_GET['lm']);
+                            ?>
+                            <div class="card flex-fill w-100 low-stock-panel">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Low Stock</h5>
                                 </div>
-                                <?php 
-                                // Calculate effective stock
-                                $effective_stock = $product['has_variants'] > 0 ? ($product['total_variant_stock'] ?? 0) : $product['stock'];
-                                ?>
-                                <div class="position-absolute top-0 start-0 m-2">
-                                    <?php if ($effective_stock <= 0): ?>
-                                        <span class="badge bg-danger">Out of Stock</span>
-                                    <?php elseif ($effective_stock > 0 && $effective_stock <= $product['restock_alert']): ?>
-                                        <span class="badge bg-warning text-dark">Low Stock</span>
-                                    <?php else: ?>
-                                        <span class="badge bg-success">In Stock</span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            <div class="card-body d-flex flex-column">
-                                <div class="mb-2">
-                                    <span class="badge mb-2" style="background: linear-gradient(135deg, var(--primary-color), #3b82f6); border-radius: 6px;"><?php echo htmlspecialchars($product['category_name']); ?></span>
-                                    <span class="badge mb-2 ms-1" style="background: linear-gradient(135deg, #10b981, #059669); border-radius: 6px;"><?php echo htmlspecialchars($product['material']); ?></span>
-                                </div>
-                                <h5 class="card-title fw-bold" style="color: #1e293b;"><?php echo htmlspecialchars($product['product_name']); ?></h5>
-                                <div class="mb-2">
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <span class="text-warning" style="font-size: 1.1rem;">
-                                            <?php echo renderStars($product['avg_rating']); ?>
-                                        </span>
-                                        <span class="badge bg-warning text-dark" style="border-radius: 6px;"><?php echo number_format($product['avg_rating'], 1); ?></span>
-                                    </div>
-                                    <p class="card-text text-muted small mb-2">
-                                        <?php if (!empty($product['sizes_pairs'])): ?>
-                                            <?php
-                                                // Parse variant sizes
-                                                $sizes = array_filter(explode('||', $product['sizes_pairs']));
-                                                $size_list = [];
-                                                foreach ($sizes as $s) {
-                                                    if (!empty($s)) {
-                                                        list($size_name, $stock) = explode('::', $s);
-                                                        $size_list[] = $size_name;
-                                                    }
-                                                }
-                                                $size_display = implode(', ', $size_list);
-                                            ?>
-                                            <i class="bi bi-rulers text-primary me-1"></i>Available sizes: <?php echo htmlspecialchars($size_display); ?>
-                                        <?php endif; ?>
-                                    </p>
-                                </div>
-                                <div class="mt-auto">
-                                    <div class="d-flex justify-content-between align-items-center mb-3">
-                                        <div>
-                                            <small class="text-muted d-block" style="font-size: 0.7rem;">PRICE</small>
-                                            <?php 
-                                                // Use variant price if available, otherwise product price
-                                                $display_price = !empty($product['from_price']) ? $product['from_price'] : $product['price'];
-                                                $has_variants = $product['has_variants'] > 0;
-                                            ?>
-                                            <?php if ($is_bulk_buyer && $user_discount > 0): ?>
-                                                <?php 
-                                                    $discounted_price = $display_price * (1 - ($user_discount / 100));
-                                                ?>
-                                                <small class="text-muted text-decoration-line-through d-block"><?php echo $has_variants ? 'From ' : ''; ?>₱<?php echo number_format($display_price, 2); ?></small>
-                                                <span class="fw-bold" style="font-size: 1.5rem; background: linear-gradient(135deg, #10b981, #059669); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"><?php echo $has_variants ? 'From ' : ''; ?>₱<?php echo number_format($discounted_price, 2); ?></span>
-                                                <small class="badge bg-success">-<?php echo $user_discount; ?>%</small>
-                                            <?php else: ?>
-                                                <span class="fw-bold" style="font-size: 1.5rem; background: linear-gradient(135deg, var(--primary-color), #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;"><?php echo $has_variants ? 'From ' : ''; ?>₱<?php echo number_format($display_price, 2); ?></span>
-                                            <?php endif; ?>
+                                <div class="card-body w-100 p-2">
+                                    <div class="accordion" id="lowStockAccordion">
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="headingProducts">
+                                                <button class="accordion-button <?php echo $products_open ? '' : 'collapsed'; ?> py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProducts" aria-expanded="<?php echo $products_open ? 'true' : 'false'; ?>" aria-controls="collapseProducts">
+                                                    <i class="bi bi-box-seam me-2"></i>Products
+                                                    <span class="badge bg-danger-subtle text-danger fw-bold ms-auto"><?php echo $low_stock_products_total; ?></span>
+                                                </button>
+                                            </h2>
+                                            <div id="collapseProducts" class="accordion-collapse collapse <?php echo $products_open ? 'show' : ''; ?>" aria-labelledby="headingProducts" data-bs-parent="#lowStockAccordion">
+                                                <div class="accordion-body p-2" style="max-height: 300px; overflow-y: auto;">
+                                                    <?php if ($low_stock_products): ?>
+                                                        <?php foreach ($low_stock_products as $product): ?>
+                                                            <a href="products.php#product-<?php echo $product['product_id']; ?>" class="alert-low mb-2">
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <div>
+                                                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                                                        <strong class="name clamp-2"><?php echo htmlspecialchars($product['product_name']); ?></strong>
+                                                                        <div class="small mt-1">
+                                                                            <span class="badge bg-danger"><?php echo htmlspecialchars($product['stock']); ?> units left</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <button class="restock-btn" onclick="event.preventDefault(); window.location.href='products.php#product-<?php echo $product['product_id']; ?>'">
+                                                                        <i class="bi bi-arrow-clockwise me-1"></i>Restock
+                                                                    </button>
+                                                                </div>
+                                                            </a>
+                                                        <?php endforeach; ?>
+                                                    <?php else: ?>
+                                                        <div class="alert-ok mb-0"><i class="bi bi-check-circle-fill me-1"></i>All products are well stocked!</div>
+                                                    <?php endif; ?>
+                                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                                        <?php $lp_prev = max(1, $lp_page - 1); $lp_next = min($lp_total_pages, $lp_page + 1); ?>
+                                                        <a class="btn btn-sm btn-outline-secondary <?php echo $lp_page <= 1 ? 'disabled' : ''; ?>" href="index.php?lp=<?php echo $lp_prev; ?>#collapseProducts">Prev</a>
+                                                        <div class="small text-muted">Page <?php echo $lp_page; ?> of <?php echo $lp_total_pages; ?></div>
+                                                        <a class="btn btn-sm btn-outline-primary <?php echo $lp_page >= $lp_total_pages ? 'disabled' : ''; ?>" href="index.php?lp=<?php echo $lp_next; ?>#collapseProducts">Next</a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="headingMaterials">
+                                                <button class="accordion-button <?php echo $materials_open ? '' : 'collapsed'; ?> py-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseMaterials" aria-expanded="<?php echo $materials_open ? 'true' : 'false'; ?>" aria-controls="collapseMaterials">
+                                                    <i class="bi bi-boxes me-2"></i>Materials
+                                                    <span class="badge bg-danger-subtle text-danger fw-bold ms-auto"><?php echo $low_stock_materials_total; ?></span>
+                                                </button>
+                                            </h2>
+                                            <div id="collapseMaterials" class="accordion-collapse collapse <?php echo $materials_open ? 'show' : ''; ?>" aria-labelledby="headingMaterials" data-bs-parent="#lowStockAccordion">
+                                                <div class="accordion-body p-2" style="max-height: 300px; overflow-y: auto;">
+                                                    <?php if ($low_stock_materials): ?>
+                                                        <?php foreach ($low_stock_materials as $material): ?>
+                                                            <a href="materialinventory.php#material-<?php echo $material['material_id']; ?>" class="alert-low mb-2">
+                                                                <div class="d-flex justify-content-between align-items-center">
+                                                                    <div>
+                                                                        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                                                        <strong class="name clamp-2"><?php echo htmlspecialchars($material['material_name']); ?></strong>
+                                                                        <div class="small mt-1">
+                                                                            <span class="badge bg-danger"><?php echo htmlspecialchars($material['stock']); ?> <?php echo htmlspecialchars($material['materialunit_name']); ?> left</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <button class="restock-btn" onclick="event.preventDefault(); window.location.href='materialinventory.php#material-<?php echo $material['material_id']; ?>'">
+                                                                        <i class="bi bi-arrow-clockwise me-1"></i>Reorder
+                                                                    </button>
+                                                                </div>
+                                                            </a>
+                                                        <?php endforeach; ?>
+                                                    <?php else: ?>
+                                                        <div class="alert-ok mb-0"><i class="bi bi-check-circle-fill me-1"></i>All materials are well-stocked.</div>
+                                                    <?php endif; ?>
+                                                    <div class="d-flex justify-content-between align-items-center mt-2">
+                                                        <?php $lm_prev = max(1, $lm_page - 1); $lm_next = min($lm_total_pages, $lm_page + 1); ?>
+                                                        <a class="btn btn-sm btn-outline-secondary <?php echo $lm_page <= 1 ? 'disabled' : ''; ?>" href="index.php?lm=<?php echo $lm_prev; ?>#collapseMaterials">Prev</a>
+                                                        <div class="small text-muted">Page <?php echo $lm_page; ?> of <?php echo $lm_total_pages; ?></div>
+                                                        <a class="btn btn-sm btn-outline-primary <?php echo $lm_page >= $lm_total_pages ? 'disabled' : ''; ?>" href="index.php?lm=<?php echo $lm_next; ?>#collapseMaterials">Next</a>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="d-grid gap-2">
-                                        <?php if ($effective_stock <= 0): ?>
-                                            <button class="btn btn-secondary" disabled style="border-radius: 8px; padding: 0.6rem;">
-                                                <i class="bi bi-x-circle me-2"></i>Out of Stock
-                                            </button>
-                                            <a href="product.php?id=<?php echo $product['product_id']; ?>" class="btn btn-outline-primary" style="border-radius: 8px; padding: 0.6rem;">
-                                                <i class="bi bi-eye me-2"></i>View Details
-                                            </a>
-                                        <?php elseif ($has_variants): ?>
-                                            <a href="product.php?id=<?php echo $product['product_id']; ?>" class="btn btn-primary" style="border-radius: 8px; padding: 0.6rem;">
-                                                <i class="bi bi-eye me-2"></i>View Details
-                                            </a>
-                                        <?php else: ?>
-                                            <button onclick="addToCart(<?php echo $product['product_id']; ?>, event)" class="btn btn-primary" style="border-radius: 8px; padding: 0.6rem;">
-                                                <i class="bi bi-cart-plus me-2"></i>Add to Cart
-                                            </button>
-                                            <a href="product.php?id=<?php echo $product['product_id']; ?>" class="btn btn-outline-primary" style="border-radius: 8px; padding: 0.6rem;">View Details</a>
-                                        <?php endif; ?>
+                                    <div class="d-flex justify-content-between mt-2">
+                                        <a href="products.php" class="btn btn-sm btn-outline-primary">View all low stock products</a>
+                                        <a href="materialinventory.php" class="btn btn-sm btn-outline-primary">View all low stock materials</a>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-            <div class="text-center mt-5">
-                <a href="shop.php" class="btn btn-primary btn-lg" style="padding: 0.8rem 2.5rem; border-radius: 50px;">
-                    <i class="bi bi-grid-3x3-gap me-2"></i>View All Products
-                </a>
-            </div>
-        </div>
-    </section>
+						</div>
+					</div>
 
-    <!-- Testimonials 
-    <section class="py-5">
-        <div class="container">
-            <h2 class="text-center mb-5">What Our Customers Say</h2>
-            <div class="swiper-container">
-                <div class="swiper-wrapper">
-                    <div class="swiper-slide">
-                        <div class="testimonial-card">
-                            <p class="mb-3">No reviews available yet.</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="swiper-pagination"></div>
-            </div>
-        </div>
-    </section> -->
+					<footer class="footer">
+						<div class="container-fluid">
+							
+						</div>
+					</footer>
+				</div>
+			</div>
 
+			<script src="js/app.js"></script>
+			<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- CTA Section -->
-    <section class="cta-section text-center">
-        <div class="container" style="position: relative; z-index: 1;">
-            <h2 class="display-3 fw-bold mb-4" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.2);">Ready to Shop?</h2>
-            <p class="lead mb-5" style="font-size: 1.2rem; max-width: 600px; margin: 0 auto;">Browse our collection of quality bedsheets, curtains, and comforters</p>
-            <a href="shop.php" class="btn btn-light btn-hero">
-                <i class="bi bi-cart-check me-2"></i>Start Shopping
-            </a>
-        </div>
-    </section>
+			<script>
+document.addEventListener("DOMContentLoaded", function() {
+  fetch('backend/fetch_dashboard_data.php')
+    .then(response => response.json())
+    .then(chartData => {
+      var ctx = document.getElementById("chartjs-dashboard-line").getContext("2d");
+      
+      // Create beautiful blue gradient
+      var gradient = ctx.createLinearGradient(0, 0, 0, 300);
+      gradient.addColorStop(0, "rgba(37, 99, 235, 0.8)");
+      gradient.addColorStop(0.5, "rgba(59, 130, 246, 0.4)");
+      gradient.addColorStop(1, "rgba(96, 165, 250, 0.05)");
 
-    <!-- <script src="assets/js/script.js"></script> -->
-</body>
-</html>
-
-    <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
-    <script>
-        // Create floating dots
-        function createFloatingDots() {
-            const container = document.getElementById('floatingDots');
-            if (!container) return;
-            
-            // Clear existing dots
-            container.innerHTML = '';
-            
-            // Create 20 floating dots
-            for (let i = 0; i < 20; i++) {
-                const dot = document.createElement('div');
-                const size = Math.random() * 8 + 4; // 4px to 12px
-                const isBlue = Math.random() > 0.5;
-                const duration = 15 + Math.random() * 20; // 15-35s
-                const delay = Math.random() * -20; // 0 to -20s
-                const posX = Math.random() * 100; // 0% to 100%
-                const posY = Math.random() * 100; // 0% to 100%
-                
-                dot.className = `dot ${isBlue ? 'blue' : 'yellow'}`;
-                dot.style.cssText = `
-                    width: ${size}px;
-                    height: ${size}px;
-                    left: ${posX}%;
-                    top: ${posY}%;
-                    --duration: ${duration}s;
-                    --delay: ${delay}s;
-                    animation-duration: ${duration}s;
-                    animation-delay: ${delay}s;
-                `;
-                
-                container.appendChild(dot);
-            }
-        }
-        
-        // Dynamic floating elements
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialize floating dots
-            createFloatingDots();
-            const heroSection = document.querySelector('.hero-section');
-            const floatingContainer = document.querySelector('.floating-elements');
-            
-            // Add more dynamic floating elements
-            function createFloatingElement() {
-                const element = document.createElement('div');
-                const size = Math.random() * 30 + 10; // 10px to 40px
-                const isYellow = Math.random() > 0.5;
-                const isLarge = Math.random() > 0.9;
-                
-                element.className = 'floating-element' + (isYellow ? ' yellow-float' : '') + (isLarge ? ' accent-float' : '');
-                
-                const style = {
-                    '--size': `${size}px`,
-                    '--x': `${Math.random() * 100}%`,
-                    '--y': `${Math.random() * 100}%`,
-                    '--duration': `${15 + Math.random() * 20}s`,
-                    '--delay': `-${Math.random() * 10}s`
-                };
-                
-                Object.assign(element.style, style);
-                floatingContainer.appendChild(element);
-            }
-            
-            // Create initial floating elements
-            for (let i = 0; i < 5; i++) {
-                createFloatingElement();
-            }
-            
-            // Add interactive effect on mousemove
-            heroSection.addEventListener('mousemove', (e) => {
-                const { clientX, clientY } = e;
-                const { left, top, width, height } = heroSection.getBoundingClientRect();
-                
-                const x = ((clientX - left) / width) * 100;
-                const y = ((clientY - top) / height) * 100;
-                
-                // Move the accent float towards cursor
-                const accentFloat = document.querySelector('.accent-float');
-                if (accentFloat) {
-                    accentFloat.style.setProperty('--x', `${x}%`);
-                    accentFloat.style.setProperty('--y', `${y}%`);
-                }
-            });
-        });
-
-        // Initialize Swiper
-        new Swiper('.swiper-container', {
-            slidesPerView: 1,
-            spaceBetween: 20,
-            pagination: {
-                el: '.swiper-pagination',
-                clickable: true,
-            },
-            breakpoints: {
-                640: {
-                    slidesPerView: 2,
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: chartData.labels,
+          datasets: [{
+            label: "Monthly Revenue",
+            fill: true,
+            backgroundColor: gradient,
+            borderColor: "#2563eb",
+            borderWidth: 3,
+            pointBackgroundColor: "#2563eb",
+            pointBorderColor: "#fff",
+            pointBorderWidth: 3,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            pointHoverBackgroundColor: "#1e40af",
+            pointHoverBorderColor: "#fff",
+            pointHoverBorderWidth: 3,
+            data: chartData.data,
+            tension: 0.4
+          }]
+        },
+        options: {
+          maintainAspectRatio: false,
+          responsive: true,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'top',
+              labels: {
+                font: {
+                  size: 13,
+                  weight: '600',
+                  family: "'Inter', sans-serif"
                 },
-                1024: {
-                    slidesPerView: 3,
-                },
+                color: '#475569',
+                padding: 15,
+                usePointStyle: true,
+                pointStyle: 'circle'
+              }
             },
-            autoplay: {
-                delay: 5000,
-            },
-        });
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Parallax & Scroll Reveal Effects -->
-    <script>
-        // Parallax for fabric waves
-        window.addEventListener('scroll', function() {
-            const scrolled = window.pageYOffset;
-            
-            const wave1 = document.querySelector('.fabric-wave-1');
-            const wave2 = document.querySelector('.fabric-wave-2');
-            
-            if (wave1) {
-                wave1.style.transform = `translateY(${scrolled * 0.2}px) translateX(-10%)`;
-            }
-            if (wave2) {
-                wave2.style.transform = `translateY(${scrolled * 0.3}px) translateX(10%)`;
-            }
-            
-            // Scroll Reveal Animation
-            const reveals = document.querySelectorAll('.scroll-reveal');
-            reveals.forEach(element => {
-                const elementTop = element.getBoundingClientRect().top;
-                const windowHeight = window.innerHeight;
-                
-                if (elementTop < windowHeight - 100) {
-                    element.classList.add('active');
+            tooltip: {
+              enabled: true,
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              titleColor: '#fff',
+              bodyColor: '#fff',
+              titleFont: {
+                size: 14,
+                weight: '600'
+              },
+              bodyFont: {
+                size: 13
+              },
+              padding: 12,
+              cornerRadius: 8,
+              displayColors: false,
+              callbacks: {
+                label: function(context) {
+                  return 'Revenue: ₱' + context.parsed.y.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
                 }
-            });
-        });
-        
-        // Trigger on page load
-        window.dispatchEvent(new Event('scroll'));
-    </script>
-
-    <?php if(isset($success_message)): ?>
-        <script>
-            Swal.fire({
-                icon: 'success',
-                title: 'Success!',
-                text: '<?php echo $success_message; ?>'
-            });
-        </script>
-    <?php elseif(isset($error_message)): ?>
-        <script>
-            Swal.fire({
-                icon: 'error',
-                title: 'Error!',
-                text: '<?php echo $error_message; ?>'
-            });
-        </script>
-    <?php endif; ?>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        .custom-spinner {
-            width: 3rem;
-            height: 3rem;
-            border: 0.4rem solid #f3f3f3;
-            border-top: 0.4rem solid var(--bs-primary);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 1rem auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
-    <script>
-        const customSwal = (title, text) => {
-            Swal.fire({
-            title: title,
-            html: `
-                <div class="custom-spinner mb-2"></div>
-                <p>${text}</p>
-            `,
-            showConfirmButton: false,
-            allowOutsideClick: false,
-            allowEscapeKey: false
-            });
-        };
-        
-        // Function to update cart count in navbar
-        function updateCartCount() {
-            fetch('backend/get_cart_count.php')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        const cartLink = document.querySelector('a[href="cart.php"]');
-                        if (cartLink) {
-                            // Remove existing badge if any
-                            const existingBadge = cartLink.querySelector('.badge');
-                            if (existingBadge) {
-                                existingBadge.remove();
-                            }
-                            
-                            // Add badge only if count > 0
-                            if (data.count > 0) {
-                                const badge = document.createElement('span');
-                                badge.className = 'badge bg-primary rounded-pill';
-                                badge.id = 'cart-count';
-                                badge.textContent = data.count;
-                                cartLink.appendChild(badge);
-                            }
-                        }
-                    }
-                })
-                .catch(error => {
-                    console.log('Error updating cart count:', error);
-                });
-        }
-        
-        function addToCart(productId, event) {
-            // Prevent event bubbling to parent elements
-            if (event) {
-                event.preventDefault();
-                event.stopPropagation();
+              }
             }
-            
-            customSwal('Please wait...', 'Adding product to cart...');
-
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', 'backend/add_to_cart.php', true);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            xhr.send('action=add_to_cart&product_id=' + productId + '&quantity=1');
-
-            const startTime = Date.now(); // Record when the request starts
-
-            xhr.onload = function () {
-                const elapsed = Date.now() - startTime;
-                const delay = Math.max(0, 1000 - elapsed); // Ensure at least 1s delay
-
-                setTimeout(() => {
-                    Swal.close(); // Close loading screen after delay
-
-                    if (xhr.status == 200) {
-                        if (xhr.responseText.trim() === 'not_logged_in') {
-                            Swal.fire({
-                                title: 'Please Log In',
-                                text: 'You need to log in to add items to your cart.',
-                                icon: 'warning',
-                                confirmButtonText: 'Go to Login'
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.location.href = 'login.php';
-                                }
-                            });
-                        }
-                        else if (xhr.responseText.trim() === 'not_verified') {
-                            Swal.fire({
-                                title: 'Email Not Verified',
-                                text: 'You need to verify your email address before adding items to your cart.',
-                                icon: 'warning',
-                                showCancelButton: true,
-                                confirmButtonText: 'Verify',
-                                cancelButtonText: 'Go Back'
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.location.href = 'verify_email.php';
-                                } else {
-                                    window.history.replaceState(null, '', 'index.php');
-                                    window.location.href = 'index.php';
-                                }
-                            });
-                        }
-                        else if (xhr.responseText.trim() === 'out_of_stock') {
-                            Swal.fire({
-                                title: 'Out of Stock',
-                                text: 'Sorry, the product is out of stock or the quantity you requested is unavailable.',
-                                icon: 'error',
-                                confirmButtonText: 'OK'
-                            });
-                        }
-                        else if (xhr.responseText.trim() === 'cart_limit_reached') {
-                            Swal.fire({
-                                title: 'Cart Limit Reached',
-                                text: 'You cannot have more than 50 products in your cart. Please remove some items before adding new ones.',
-                                icon: 'warning',
-                                confirmButtonText: 'OK'
-                            });
-                        } else {
-                            // Update cart count immediately
-                            updateCartCount();
-                            
-                            // Parse JSON response
-                            try {
-                                const response = JSON.parse(xhr.responseText);
-                                Swal.fire({
-                                    title: 'Product Added to Cart',
-                                    text: response.message || 'Product added successfully!',
-                                    icon: 'success',
-                                    timer: 2000,
-                                    showConfirmButton: false
-                                });
-                            } catch (e) {
-                                // Fallback if response is not JSON
-                                Swal.fire({
-                                    title: 'Product Added to Cart',
-                                    text: 'Product added successfully!',
-                                    icon: 'success',
-                                    timer: 2000,
-                                    showConfirmButton: false
-                                });
-                            }
-                            // No page reload - user stays on current page
-                        }
-                    } else {
-                        Swal.fire({
-                            title: 'Error!',
-                            text: 'There was an issue adding the product to the cart.',
-                            icon: 'error',
-                            confirmButtonText: 'OK'
-                        });
-                    }
-                }, delay);
-            };
-
-            xhr.onerror = function () {
-                const elapsed = Date.now() - startTime;
-                const delay = Math.max(0, 1000 - elapsed);
-
-                setTimeout(() => {
-                    Swal.close();
-                    Swal.fire({
-                        title: 'Network Error',
-                        text: 'There was an issue with the request.',
-                        icon: 'error',
-                        confirmButtonText: 'OK'
-                    });
-                }, delay);
-            };
+          },
+          scales: {
+            x: {
+              grid: {
+                display: false
+              },
+              ticks: {
+                font: {
+                  size: 12,
+                  weight: '500'
+                },
+                color: '#64748b'
+              }
+            },
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: 'rgba(148, 163, 184, 0.1)',
+                drawBorder: false
+              },
+              ticks: {
+                font: {
+                  size: 12,
+                  weight: '500'
+                },
+                color: '#64748b',
+                callback: function(value) {
+                  return '₱' + value.toLocaleString('en-PH');
+                }
+              }
+            }
+          },
+          interaction: {
+            intersect: false,
+            mode: 'index'
+          }
         }
+      });
+    })
+    .catch(err => console.error('Error loading chart data:', err));
+});
+</script>
 
-    </script>
+
 </body>
 
 </html>
