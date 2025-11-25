@@ -1,0 +1,38 @@
+:root {
+    --bs-primary: #2563eb;
+    --bs-secondary: #f59e0b;
+    --bs-accent: #ffffff;
+  }
+  body {
+    background: linear-gradient(120deg, #f8fafc 0%, #ffffff 100%);
+  }
+  .btn-primary {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+  }
+  .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    background-color: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+  }
+  .text-primary {
+    color: #2563eb !important;
+  }
+  .bg-primary {
+    background-color: #2563eb !important;
+  }
+  .border-primary {
+    border-color: #2563eb !important;
+  }
+  .section-heading {
+    font-weight: bold;
+    color: var(--bs-primary);
+    text-align: center;
+  }
+  .testimonial {
+    font-style: italic;
+    color: #555;
+  }
+  .product-image {
+    max-width: 100%;
+    height: auto;
+  }
