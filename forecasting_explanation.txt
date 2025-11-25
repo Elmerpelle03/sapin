@@ -1,0 +1,83 @@
+# Forecasting System Documentation
+
+## Forecasting Overview
+
+Our system includes a forecasting module that predicts future product demand based on historical sales data. The goal of the forecast is to help:
+
+- Plan inventory more accurately  
+- Reduce stockouts (running out of items)  
+- Avoid overstocking, which ties up capital and storage space  
+
+The forecast uses past sales patterns to estimate how much of each product will be needed in upcoming periods (e.g., days, weeks, or months).
+
+## Data Used for Forecasting
+
+The forecasting process typically uses:
+
+- Historical sales quantities per product per time period  
+- Time period (day/week/month)  
+- Recent trends (whether sales are increasing or decreasing)  
+- Seasonality (if applicable, e.g., higher demand on weekends or certain months)  
+
+Only cleaned and valid sales records are included so that unusual or invalid entries do not distort the prediction.
+
+## Forecasting Formula (Example: Moving Average)
+
+A common method used is the Moving Average Forecast, where the forecast for the next period is the average of the sales from the last N periods.
+
+Formula:
+
+Let:
+- Ft+1 = forecast for the next period  
+- At = actual sales in the current period  
+- At-1, At-2, ..., At-(N-1) = actual sales in previous periods  
+- N = number of periods used in the average (window size)
+
+Then:
+
+Ft+1 = (At + At-1 + At-2 + ... + At-(N-1)) / N
+
+This means we add the sales of the last N periods and divide by N to get the expected demand for the next period.
+
+## Important Concepts
+
+- Forecast Horizon  
+  How far ahead we are forecasting (e.g., next day, next week, next month).
+
+- Window Size (N)  
+  How many past periods are included in the average.  
+  - Small N → more responsive to recent changes but more "noisy"  
+  - Large N → smoother but slower to react
+
+- Trend and Seasonality  
+  If sales are clearly increasing/decreasing or have seasonal peaks, the model can be adjusted (e.g., weighting recent periods more).
+
+- Forecast Error  
+  After actual sales occur, we compare them to the forecast to see how accurate it was.  
+  Common metrics:  
+  - Error = Actual – Forecast  
+  - Absolute Error = |Actual – Forecast|  
+  - These are used to tune N or improve the method.
+
+## How the Forecast Is Used in the System
+
+- Reorder Planning  
+  The forecasted demand per product is compared to current stock and safety stock to determine when to reorder and how much.
+
+- Stock Level Decisions  
+  If the forecasted demand is higher than current stock, the system can flag items as "at risk of stockout".
+
+- Reporting  
+  Forecasts are shown alongside actual sales to help management monitor performance and adjust purchasing strategies.
+
+## Implementation in Our System
+
+The forecasting implementation in our POS and inventory management system:
+
+1. Collects historical sales data from completed transactions
+2. Calculates average demand per product over configurable time periods
+3. Projects future demand based on the calculated averages
+4. Integrates with the inventory management system to suggest reorder quantities
+5. Updates in real-time as new sales are processed
+
+This forecasting system helps maintain optimal stock levels across all products, ensuring we meet customer demand while minimizing excess inventory costs.
