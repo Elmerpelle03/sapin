@@ -1,0 +1,76 @@
+╔══════════════════════════════════════════════════════════════════╗
+║          HOSTINGER DEFINER ERROR - QUICK FIX GUIDE              ║
+╚══════════════════════════════════════════════════════════════════╝
+
+ERROR YOU'RE SEEING:
+--------------------
+#1227 - Access denied; you need (at least one of) the SET USER 
+privilege(s) for this operation
+
+CAUSE:
+------
+Your SQL dump contains DEFINER='root'@'localhost' which Hostinger 
+doesn't allow on shared hosting.
+
+═══════════════════════════════════════════════════════════════════
+
+SOLUTION 1: Use the Automated Script (EASIEST)
+-----------------------------------------------
+1. Double-click: remove_definers.bat
+2. Drag and drop your SQL file when prompted
+3. Upload the new "_hostinger_ready.sql" file to Hostinger
+
+═══════════════════════════════════════════════════════════════════
+
+SOLUTION 2: Export Fresh from phpMyAdmin (RECOMMENDED)
+-------------------------------------------------------
+1. Open phpMyAdmin on localhost
+2. Select your database
+3. Click "Export" tab
+4. Choose "Custom" method
+5. Scroll to "Object creation options"
+6. UNCHECK any option with "DEFINER" in it
+7. Click "Go" to download
+8. Upload to Hostinger
+
+═══════════════════════════════════════════════════════════════════
+
+SOLUTION 3: Manual Find & Replace
+----------------------------------
+1. Open your SQL file in Notepad++ or VS Code
+2. Press Ctrl+H (Find & Replace)
+3. Find:    DEFINER=`root`@`localhost`
+4. Replace: (leave empty)
+5. Click "Replace All"
+6. Save and upload to Hostinger
+
+═══════════════════════════════════════════════════════════════════
+
+SOLUTION 4: Already Uploaded? Run This SQL
+-------------------------------------------
+1. Go to Hostinger phpMyAdmin
+2. Click "SQL" tab
+3. Copy and paste contents of:
+   database/HOSTINGER_FIX_remove_definers.sql
+4. Click "Go"
+
+═══════════════════════════════════════════════════════════════════
+
+AFTER FIXING:
+-------------
+✓ Upload your files to Hostinger
+✓ Update database credentials in your config files
+✓ Test all features:
+  - Login
+  - POS System
+  - Inventory
+  - Reports
+  - User Management
+
+═══════════════════════════════════════════════════════════════════
+
+NEED MORE HELP?
+---------------
+Read: HOSTINGER_DEPLOYMENT_GUIDE.md (detailed instructions)
+
+═══════════════════════════════════════════════════════════════════
