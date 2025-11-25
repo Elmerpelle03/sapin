@@ -1,0 +1,132 @@
+.sidebar-content, .sidebar-item, .sidebar-link {
+    background-color: #2563eb !important;
+    color: white;
+}	
+.align-middle, .sidebar-header{
+    color: white;
+}
+.sidebar-item.active > .sidebar-link {
+    background-color: #3b82f6 !important; /* lighter blue */
+    color: white !important;            /* for readable contrast */
+    font-weight: 600;
+}
+.btn-primary {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+}
+.text-primary {
+    color: #2563eb !important;
+}
+.bg-primary {
+    background-color: #2563eb !important;
+}
+
+/* Mobile and Tablet Responsiveness - Portrait and Landscape */
+@media (max-width: 991.98px) {
+    .sidebar {
+        position: fixed !important;
+        left: -280px !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        width: 280px !important;
+        max-width: 280px !important;
+        min-width: 280px !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        z-index: 99999 !important;
+        transition: left 0.3s ease-in-out !important;
+        background: #ffffff !important;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.4) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+        transform: translateX(0) !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        display: block !important;
+        visibility: visible !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    
+    .sidebar.mobile-open {
+        left: 0 !important;
+        transform: translateX(0) !important;
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+    
+    /* Force sidebar to be hidden when not open */
+    .sidebar:not(.mobile-open) {
+        left: -280px !important;
+    }
+    
+    .sidebar .sidebar-content {
+        width: 100% !important;
+        min-width: 280px !important;
+        display: block !important;
+    }
+    
+    .sidebar .sidebar-nav {
+        width: 100% !important;
+        display: block !important;
+    }
+    
+    .main {
+        margin-left: 0 !important;
+        width: 100% !important;
+    }
+    
+    .container-fluid {
+        padding: 1rem;
+    }
+    .card {
+        margin-bottom: 1rem;
+    }
+    .table-responsive {
+        font-size: 0.8rem;
+    }
+    .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    .card-body {
+        padding: 1rem;
+    }
+}
+
+/* Portrait mode specific fixes */
+@media (max-width: 767.98px) and (orientation: portrait) {
+    .sidebar {
+        position: fixed !important;
+        left: -280px !important;
+        width: 280px !important;
+        height: 100% !important;
+        z-index: 99999 !important;
+    }
+    
+    .sidebar.mobile-open {
+        left: 0 !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .container-fluid {
+        padding: 0.5rem;
+    }
+    .card-body {
+        padding: 0.8rem;
+    }
+    .btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+    .table-responsive {
+        font-size: 0.7rem;
+    }
+    h1, h2, h3 {
+        font-size: 1.2rem !important;
+    }
+    .modal-dialog {
+        margin: 1rem;
+    }
+}
